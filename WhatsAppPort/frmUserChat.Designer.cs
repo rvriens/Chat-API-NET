@@ -78,9 +78,9 @@
             this.lblIsTyping.AutoSize = true;
             this.lblIsTyping.Location = new System.Drawing.Point(12, 325);
             this.lblIsTyping.Name = "lblIsTyping";
-            this.lblIsTyping.Size = new System.Drawing.Size(91, 13);
+            this.lblIsTyping.Size = new System.Drawing.Size(90, 13);
             this.lblIsTyping.TabIndex = 0;
-            this.lblIsTyping.Text = "Schreibt gerade...";
+            this.lblIsTyping.Text = "Currently writing...";
             this.lblIsTyping.Visible = false;
             // 
             // timerTyping

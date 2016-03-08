@@ -52,9 +52,9 @@
             this.lblPhoneNum.AutoSize = true;
             this.lblPhoneNum.Location = new System.Drawing.Point(11, 22);
             this.lblPhoneNum.Name = "lblPhoneNum";
-            this.lblPhoneNum.Size = new System.Drawing.Size(78, 13);
+            this.lblPhoneNum.Size = new System.Drawing.Size(76, 13);
             this.lblPhoneNum.TabIndex = 1;
-            this.lblPhoneNum.Text = "Handynummer:";
+            this.lblPhoneNum.Text = "Phonenumber:";
             // 
             // btnOK
             // 
@@ -63,7 +63,7 @@
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(75, 23);
             this.btnOK.TabIndex = 1;
-            this.btnOK.Text = "Hinzufügen";
+            this.btnOK.Text = "&Add";
             this.btnOK.UseVisualStyleBackColor = true;
             this.btnOK.Click += new System.EventHandler(this.btnOK_Click);
             // 
@@ -75,7 +75,7 @@
             this.buttonAbort.Name = "buttonAbort";
             this.buttonAbort.Size = new System.Drawing.Size(75, 23);
             this.buttonAbort.TabIndex = 2;
-            this.buttonAbort.Text = "Abbrechen";
+            this.buttonAbort.Text = "A&bort";
             this.buttonAbort.UseVisualStyleBackColor = true;
             this.buttonAbort.Click += new System.EventHandler(this.buttonAbort_Click);
             // 
@@ -111,7 +111,7 @@
             this.groupBoxUserInfo.Size = new System.Drawing.Size(328, 76);
             this.groupBoxUserInfo.TabIndex = 0;
             this.groupBoxUserInfo.TabStop = false;
-            this.groupBoxUserInfo.Text = "Benutzerinformationen";
+            this.groupBoxUserInfo.Text = "User information";
             // 
             // frmAddUser
             // 
