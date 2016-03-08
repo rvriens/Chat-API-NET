@@ -19,6 +19,8 @@ namespace WhatsTest
 {
     internal class Program
     {
+        private static WhatsApp _wa;
+
         private static void Main(string[] args)
         {
             var tmpEncoding = Encoding.UTF8;
@@ -30,6 +32,7 @@ namespace WhatsTest
             string target   = "";// Mobile number to send the message to
 
             WhatsApp wa = new WhatsApp(sender, password, nickname, true);
+            _wa = wa;
 
             //event bindings
             wa.OnLoginSuccess += wa_OnLoginSuccess;
@@ -76,7 +79,6 @@ namespace WhatsTest
 
       ProcessChat(wa, target);
       Console.ReadKey();
-
 			wa.SendMessage (sender, "test");
             while (true)
             {
@@ -237,6 +239,11 @@ namespace WhatsTest
         static void wa_OnGetMessage(ProtocolTreeNode node, string from, string id, string name, string message, bool receipt_sent)
         {
             Console.WriteLine("Message from {0} {1}: {2}", name, from, message);
+
+            if (message.StartsWith("echo "))
+            {
+                _wa.SendMessage(from, message.Substring(5));
+            }
         }
 
         private static void wa_OnLoginFailed(string data)
