@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>WhatsTest</RootNamespace>
     <AssemblyName>WhatsTest</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -48,13 +48,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\WhatsAppApi\WhatsAppApi.csproj">
-      <Project>{3FC9096A-C4D2-40C7-BE7B-D98ACAB3BD2B}</Project>
-      <Name>WhatsAppApi</Name>
-    </ProjectReference>
+    <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <ProjectReference Include="..\WhatsAppApi\WhatsAppApi.csproj">
+      <Project>{3fc9096a-c4d2-40c7-be7b-d98acab3bd2b}</Project>
+      <Name>WhatsAppApi</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
