@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>WhatsAppPort</RootNamespace>
     <AssemblyName>WhatsAppPort</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -123,7 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WhatsAppApi\WhatsAppApi.csproj">
-      <Project>{3FC9096A-C4D2-40C7-BE7B-D98ACAB3BD2B}</Project>
+      <Project>{3fc9096a-c4d2-40c7-be7b-d98acab3bd2b}</Project>
       <Name>WhatsAppApi</Name>
     </ProjectReference>
   </ItemGroup>
