@@ -26,10 +26,10 @@ namespace WhatsAppApi
                 this._challengeBytes = nextChallenge;
             }
 
-            string resource = string.Format(@"{0}-{1}-{2}",
-                WhatsConstants.Device,
-                WhatsConstants.WhatsAppVer,
-                WhatsConstants.WhatsPort);
+            string resource = string.Format(@"{0}-{1}",
+                WhatsConstants.Platform,
+                WhatsConstants.WhatsAppVer);
+
             var data = this.BinWriter.StartStream(WhatsConstants.WhatsAppServer, resource);
             var feat = this.addFeatures();
             var auth = this.addAuth();
@@ -147,7 +147,7 @@ namespace WhatsAppApi
                 b.AddRange(new byte[] { 0, 0, 0, 0 });
                 b.AddRange(WhatsApp.SYSEncoding.GetBytes(this.phoneNumber));
                 b.AddRange(this._challengeBytes);
-
+                b.AddRange(WhatsApp.SYSEncoding.GetBytes(string.Format("{0}000\x00"+"000\x00{1}\x00{2}\x00{3}\x00{4}", GetTimestamp(DateTime.Now), WhatsConstants.OsVersion, WhatsConstants.Manufacturer, WhatsConstants.Device, WhatsConstants.BuildVersion )));
 
                 byte[] data = b.ToArray();
                 this.BinWriter.Key.EncodeMessage(data, 0, 4, data.Length - 4);
