@@ -61,7 +61,7 @@ namespace WhatsAppApi.Settings
         /// <summary>
         /// The whatsapp version the client complies to
         /// </summary>
-        public const string WhatsAppVer = "2.12.391";
+        public const string WhatsAppVer = "2.12.440"; //"2.12.391";
 
         /// <summary>
         /// OS Version
@@ -86,7 +86,7 @@ namespace WhatsAppApi.Settings
         /// <summary>
         /// The useragent used for http requests
         /// </summary>
-		public const string UserAgent = "WhatsApp/2.12.391 Android/4.3 Device/Xiaomi";
+		public const string UserAgent = "WhatsApp/2.12.440 Android/4.3 Device/Xiaomi-HM_1SW"; //"WhatsApp/2.12.391 Android/4.3 Device/Xiaomi";
 
 
 

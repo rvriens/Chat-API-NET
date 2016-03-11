@@ -66,6 +66,8 @@ namespace WhatsAppApi.Register
                 query.Add("hasinrc", "1");
                 query.Add("rcmatch", "1");
                 query.Add("pid", ((new Random()).Next(9899) + 100).ToString());
+                query.Add("rchash", GetRandom(20).ToSHA256String());
+                query.Add("anhash", GetRandom(20).ToMD5String());
                 query.Add("extexist", "1");
                 query.Add("extstate", "1");
                 query.Add("mcc", pn.MCC);
@@ -75,6 +77,7 @@ namespace WhatsAppApi.Register
                 query.Add("method", method);
 
                 string uri = BuildUrl(WhatsConstants.WhatsAppRequestHost, query);
+                Console.WriteLine(uri);
                 response = GetResponse(uri);
                 password = response.GetJsonValue("pw");
                 if (!string.IsNullOrEmpty(password))
@@ -122,9 +125,11 @@ namespace WhatsAppApi.Register
                 query.Add("hasinrc", "1");
                 query.Add("rcmatch", "1");
                 query.Add("pid", ((new Random()).Next(9899) + 100).ToString());
+                query.Add("rchash", GetRandom(20).ToSHA256String());
+                query.Add("anhash", GetRandom(20).ToMD5String());
                 query.Add("extexist", "1");
                 query.Add("extstate", "1");
-                query.Add("method", "sms");
+                // query.Add("method", "sms");
                 query.Add("code", code);
 
                 string uri = BuildUrl(WhatsConstants.WhatsAppRegisterHost, query);
@@ -257,12 +262,30 @@ namespace WhatsAppApi.Register
             return sb.ToString();
         }
 
+        private static byte[] GetRandom(int len)
+        {
+            byte[] bytes = new byte[len];
+            (new Random()).NextBytes(bytes);
+            return bytes;
+        }
+
         private static string ToSHAString(this string s)
         {
             byte[] data = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(s));
             string str = Encoding.GetEncoding("iso-8859-1").GetString(data);
             str = WhatsRegisterV2.UrlEncode(str).ToLower();
             return str;
+        }
+
+        private static string ToSHA256String(this byte[] bytes)
+        {
+            byte[] data = SHA256.Create().ComputeHash(bytes);
+            return string.Join(string.Empty, data.Select(q => q.ToString("x2")).ToArray());
+        }
+
+        private static string ToMD5String(this byte[] bytes)
+        {
+            return string.Join(string.Empty, MD5.Create().ComputeHash(bytes).Select(item => item.ToString("x2")).ToArray());
         }
 
         private static string ToMD5String(this IEnumerable<char> s)
