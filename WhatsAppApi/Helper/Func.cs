@@ -25,6 +25,16 @@ namespace WhatsAppApi.Helper
             return (val.ToString("X").Length%2 == 0) ? val.ToString("X") : ("0" + val.ToString("X"));
         }
 
+        public static string _toHex(byte[] bytes)
+        {
+            string d = "";
+            foreach (byte b in bytes)
+            {
+                d += b.ToString("X2");
+            }
+            return d;
+        }
+
         public static string random_uuid()
         {
             var mt_rand = new Random();

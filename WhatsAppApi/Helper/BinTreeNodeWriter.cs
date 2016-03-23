@@ -31,7 +31,7 @@ namespace WhatsAppApi.Helper
             this.buffer.Add((byte)'W');
             this.buffer.Add((byte)'A');
             this.buffer.Add(0x1);
-            this.buffer.Add(0x5);
+            this.buffer.Add(0x6);
             this.buffer.AddRange(ret);
             ret = buffer.ToArray();
             this.buffer = new List<byte>();
@@ -89,7 +89,7 @@ namespace WhatsAppApi.Helper
                 foreach (var item in attributes)
                 {
                     this.writeString(item.Key);
-                    this.writeString(item.Value);
+                    this.writeString(item.Value, true);
                 }
             }
         }
@@ -111,30 +111,158 @@ namespace WhatsAppApi.Helper
             return ret;
         }
 
-        protected void writeBytes(string bytes)
+        protected void writeBytes(string bytes, bool b = false)
         {
-            writeBytes(WhatsApp.SYSEncoding.GetBytes(bytes));
+            writeBytes(WhatsApp.SYSEncoding.GetBytes(bytes), b);
         }
-        protected void writeBytes(byte[] bytes)
+
+        protected void writeBytes(byte[] bytes, bool b = false)
         {
             int len = bytes.Length;
-            if (len >= 0x100)
+            if (len >= 0x100000)
+            {
+                this.buffer.Add(0xfe);
+                this.writeInt31(len);
+
+            }
+            else if (len >= 0x100)
             {
                 this.buffer.Add(0xfd);
                 this.writeInt24(len);
             }
             else
             {
-                this.buffer.Add(0xfc);
-                this.writeInt8(len);
+                //this.buffer.Add(0xfc);
+                //this.writeInt8(len);
+
+                byte[] r = null;
+                if (b) {
+                    if (len < 128) {
+                    r = this.tryPackAndWriteHeader(255, bytes);
+                        if (r == null) {
+                        r = this.tryPackAndWriteHeader(251, bytes);
+                        }
+                    }
+                }
+                if (r == null) {
+                    this.buffer.Add(0xfc);
+                    this.writeInt8(len);
+                } else {
+                    bytes = r;
+                }
+
+
             }
             this.buffer.AddRange(bytes);
+        }
+
+        private int packByte(byte v, byte n2)
+        {
+            switch (v) {
+            case 251:
+                return this.packHex(n2);
+            case 255:
+                return this.packNibble(n2);
+                default:
+                return -1;
+            }
+        }
+
+        private int packHex( byte n)
+        {
+            switch (n) {
+            case 48:
+            case 49:
+            case 50:
+            case 51:
+            case 52:
+            case 53:
+            case 54:
+            case 55:
+            case 56:
+            case 57:
+                return (byte) (n - 48);
+            case 65:
+            case 66:
+            case 67:
+            case 68:
+            case 69:
+            case 70:
+                return (byte)(10 + (n - 65));
+                default:
+                return -1;
+            }
+        }
+
+        private int packNibble(byte n)
+        {
+            switch (n) {
+            case 45:
+            case 46:
+                return (byte)(10 + (n - 45));
+            case 48:
+            case 49:
+            case 50:
+            case 51:
+            case 52:
+            case 53:
+            case 54:
+            case 55:
+            case 56:
+            case 57:
+                return (byte)(n - 48);
+                default:
+                return -1;
+            }
+        }
+
+        private byte[] tryPackAndWriteHeader(byte v, byte[] data)
+        {
+        int length = data.Length;
+            if (length >= 128) {
+                return null;
+            }
+
+            byte[] array2 = new byte[(int)Math.Floor((length + 1) / 2D)];
+
+            for (int i = 0; i < length; i++) {
+            int packByte = this.packByte(v, data[i]);
+                if (packByte == -1) {
+                array2 = new byte[0];
+                    break;
+                }
+            int n2 = (int)Math.Floor(i / 2D);
+            array2[n2] |= (byte)((packByte) << 4 * (1 - i % 2));
+            }
+            if (array2.Length > 0)
+            {
+                if (length % 2 == 1) {
+                array2[array2.Length - 1] |= 0xF;
+                }
+
+                //$string = implode(array_map('chr', $array2));
+                //$this->output.= chr(v);
+                //$this->output.= $this->writeInt8($length % 2 << 7 | strlen($string));
+                this.writeInt8(v);
+                this.writeInt8(length % 2 << 7 | array2.Length);
+                return array2;
+            }
+
+            return null;
         }
 
         protected void writeInt16(int v)
         {
             this.buffer.Add((byte)((v & 0xff00) >> 8));
             this.buffer.Add((byte)(v & 0x00ff));
+        }
+
+        protected void writeInt31(int v)
+        {
+            this.buffer.Add((byte)((v & 0x7f000000) >> 24));
+            this.buffer.Add((byte)((v & 0xff0000) >> 16));
+            this.buffer.Add((byte)((v & 0x00ff00) >> 8));
+            this.buffer.Add((byte)(v & 0x0000ff));
         }
 
         protected void writeInt24(int v)
@@ -185,7 +313,7 @@ namespace WhatsAppApi.Helper
             this.buffer.Add(0xfa);
             if (user.Length > 0)
             {
-                this.writeString(user);
+                this.writeString(user, true);
             }
             else
             {
@@ -212,7 +340,7 @@ namespace WhatsAppApi.Helper
             }
         }
 
-        protected void writeString(string tag)
+        protected void writeString(string tag, bool packed = false)
         {
             int intValue = -1;
             int num = -1;
@@ -228,7 +356,14 @@ namespace WhatsAppApi.Helper
             int num2 = tag.IndexOf('@');
             if (num2 < 1)
             {
-                this.writeBytes(tag);
+                if (packed)
+                {
+                    this.writeBytes(tag, true);
+                } else
+                {
+                    this.writeBytes(tag);
+                }
+                
                 return;
             }
             string server = tag.Substring(num2 + 1);

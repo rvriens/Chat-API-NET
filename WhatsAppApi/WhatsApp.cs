@@ -21,9 +21,9 @@ namespace WhatsAppApi
     /// </summary>
     public class WhatsApp : WhatsSendBase
     {
-        public WhatsApp(string phoneNum, string imei, string nick, bool debug = false, bool hidden = false)
+        public WhatsApp(string phoneNum, string password, string nick, bool debug = false, bool hidden = false)
         {
-            this._constructBase(phoneNum, imei, nick, debug, hidden);
+            this._constructBase(phoneNum, password, nick, debug, hidden);
         }
 
         public string SendMessage(string to, string txt)
@@ -511,14 +511,6 @@ namespace WhatsAppApi
             string id = TicketCounter.MakeId();
             var child = new ProtocolTreeNode("group", new[] { new KeyValue("action", "delete") });
             var node = new ProtocolTreeNode("iq", new[] { new KeyValue("id", id), new KeyValue("type", "set"), new KeyValue("xmlns", "w:g2"), new KeyValue("to", gjid) }, new ProtocolTreeNode[] { child });
-            this.SendNode(node);
-        }
-
-        public void SendGetClientConfig()
-        {
-            string id = TicketCounter.MakeId();
-            var child = new ProtocolTreeNode("config", new[] { new KeyValue("xmlns", "urn:xmpp:whatsapp:push") });
-            var node = new ProtocolTreeNode("iq", new[] { new KeyValue("id", id), new KeyValue("type", "get"), new KeyValue("to", WhatsConstants.WhatsAppRealm) }, new ProtocolTreeNode[] { child });
             this.SendNode(node);
         }
 

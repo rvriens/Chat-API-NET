@@ -5,28 +5,6 @@ using System.Text;
 
 namespace WhatsAppApi.Helper
 {
-    class TokenMap<T, U>
-    {
-         public T First
-         {
-             get;
-             set;
-         }
-         public U Second
-         {
-             get;
-             set;
-         }
-         public TokenMap()
-         {
-         }
-         public TokenMap(T first, U second)
-         {
-             this.First = first;
-             this.Second = second;
-         }
-     }
-
      public class TokenDictionary
      {
          private const int secondaryStringsStart = 236;
@@ -44,12 +22,14 @@ namespace WhatsAppApi.Helper
               "all",
               "allow",
               "apple",
+              "audio",
               "auth",
               "author",
               "available",
               "bad-protocol",
               "bad-request",
               "before",
+              "bits",
               "body",
               "broadcast",
               "cancel",
@@ -76,6 +56,7 @@ namespace WhatsAppApi.Helper
               "elapsed",
               "enable",
               "encoding",
+              "encrypt",
               "error",
               "event",
               "expiration",
@@ -88,10 +69,13 @@ namespace WhatsAppApi.Helper
               "features",
               "feature-not-implemented",
               "field",
+              "file",
+              "filehash",
               "first",
               "free",
               "from",
               "g.us",
+              "gcm",
               "get",
               "google",
               "group",
@@ -124,8 +108,10 @@ namespace WhatsAppApi.Helper
               "message",
               "method",
               "microsoft",
+              "mimetype",
               "missing",
               "modify",
+              "msg",
               "mute",
               "name",
               "nokia",
@@ -150,6 +136,7 @@ namespace WhatsAppApi.Helper
               "picture",
               "pin",
               "ping",
+              "pkmsg",
               "platform",
               "port",
               "presence",
@@ -157,6 +144,7 @@ namespace WhatsAppApi.Helper
               "probe",
               "prop",
               "props",
+              "qcount",
               "query",
               "raw",
               "read",
@@ -185,7 +173,10 @@ namespace WhatsAppApi.Helper
               "set",
               "show",
               "silent",
+              "size",
+              "skmsg",
               "stat",
+              "state",
               "status",
               "stream:error",
               "stream:features",
@@ -197,11 +188,13 @@ namespace WhatsAppApi.Helper
               "text",
               "timeout",
               "timestamp",
+              "tizen",
               "to",
               "true",
               "type",
               "unavailable",
               "unsubscribe",
+              "upgrade",
               "uri",
               "url",
               "urn:ietf:params:xml:ns:xmpp-sasl",
@@ -215,8 +208,10 @@ namespace WhatsAppApi.Helper
               "urn:xmpp:whatsapp",
               "user",
               "user-not-found",
+              "v",
               "value",
               "version",
+              "voip",
               "w:g",
               "w:p:r",
               "w:p",
@@ -237,13 +232,6 @@ namespace WhatsAppApi.Helper
               "promote",
               "demote",
               "creator",
-              "Bell.caf",
-              "Boing.caf",
-              "Glass.caf",
-              "Harp.caf",
-              "TimePassing.caf",
-              "Tri-tone.caf",
-              "Xylophone.caf",
               "background",
               "backoff",
               "chunked",
@@ -257,22 +245,22 @@ namespace WhatsAppApi.Helper
               "urn:xmpp:whatsapp:sync",
               "flt",
               "s16",
-              "u8",
-              "adpcm",
-              "amrnb",
-              "amrwb",
-              "mp3",
-              "pcm",
-              "qcelp",
-              "wma",
-              "h263",
-              "h264",
-              "jpeg"
+              "u8"
          };
-         private static string[][] secondaryStrings = new string[][]
+
+         private static string[] secondaryStrings = new string[]
          {
-             new string[]
-             {
+
+                  "adpcm",
+                  "amrnb",
+                  "amrwb",
+                  "mp3",
+                  "pcm",
+                  "qcelp",
+                  "wma",
+                  "h263",
+                  "h264",
+                  "jpeg",
                   "mpeg4",
                   "wmv",
                   "audio/3gpp",
@@ -316,7 +304,6 @@ namespace WhatsAppApi.Helper
                   "app_uptime",
                   "asampfmt",
                   "asampfreq",
-                  "audio",
                   "clear",
                   "conflict",
                   "conn_no_nna",
@@ -324,11 +311,9 @@ namespace WhatsAppApi.Helper
                   "currency",
                   "duration",
                   "extend",
-                  "file",
                   "fps",
                   "g_notify",
                   "g_sound",
-                  "gcm",
                   "gone",
                   "google_play",
                   "hash",
@@ -345,7 +330,6 @@ namespace WhatsAppApi.Helper
                   "max_groups",
                   "max_participants",
                   "max_subject",
-                  "mimetype",
                   "mode",
                   "napi_version",
                   "normalize",
@@ -363,7 +347,6 @@ namespace WhatsAppApi.Helper
                   "Replaced by new connection",
                   "resume",
                   "signature",
-                  "size",
                   "sound",
                   "source",
                   "system-shutdown",
@@ -413,6 +396,23 @@ namespace WhatsAppApi.Helper
                   "recipient",
                   "w:stats",
                   "forbidden",
+                  "max_list_recipients",
+                  "en-AU",
+                  "en-GB",
+                  "es-MX",
+                  "pt-PT",
+                  "zh-Hans",
+                  "zh-Hant",
+                  "relayelection",
+                  "relaylatency",
+                  "interruption",
+                  "Bell.caf",
+                  "Boing.caf",
+                  "Glass.caf",
+                  "Harp.caf",
+                  "TimePassing.caf",
+                  "Tri-tone.caf",
+                  "Xylophone.caf",
                   "aurora.m4r",
                   "bamboo.m4r",
                   "chord.m4r",
@@ -425,17 +425,6 @@ namespace WhatsAppApi.Helper
                   "popcorn.m4r",
                   "pulse.m4r",
                   "synth.m4r",
-                  "filehash",
-                  "max_list_recipients",
-                  "en-AU",
-                  "en-GB",
-                  "es-MX",
-                  "pt-PT",
-                  "zh-Hans",
-                  "zh-Hant",
-                  "relayelection",
-                  "relaylatency",
-                  "interruption",
                   "Apex.m4r",
                   "Beacon.m4r",
                   "Bulletin.m4r",
@@ -463,9 +452,7 @@ namespace WhatsAppApi.Helper
                   "Twinkle.m4r",
                   "Uplift.m4r",
                   "Waves.m4r",
-                  "voip",
                   "eligible",
-                  "upgrade",
                   "planned",
                   "current",
                   "future",
@@ -477,7 +464,6 @@ namespace WhatsAppApi.Helper
                   "speed",
                   "bearing",
                   "recording",
-                  "encrypt",
                   "key",
                   "identity",
                   "w:gp2",
@@ -489,19 +475,50 @@ namespace WhatsAppApi.Helper
                   "archive",
                   "adm",
                   "plaintext_size",
+                  "plaintext_disabled",
+                  "plaintext_reenable_threshold",
                   "compressed_size",
                   "delivered",
-                  "msg",
-                  "pkmsg",
                   "everyone",
-                  "v",
                   "transport",
-                  "call-id"
-             }
+                  "mspes",
+                  "e2e_groups",
+                  "e2e_images",
+                  "encr_media",
+                  "encrypt_v2",
+                  "encrypt_image",
+                  "encrypt_sends_push",
+                  "force_long_connect",
+                  "audio_opus",
+                  "video_max_edge",
+                  "call-id",
+                  "call",
+                  "preaccept",
+                  "accept",
+                  "offer",
+                  "reject",
+                  "busy",
+                  "te",
+                  "terminate",
+                  "begin",
+                  "end",
+                  "opus",
+                  "rtt",
+                  "token",
+                  "priority",
+                  "p2p",
+                  "rate",
+                  "amr",
+                  "ptt",
+                  "srtp",
+                  "os",
+                  "browser",
+                  "encrypt_group_gen2"
+             
          };
 
          private Dictionary<string, int> primaryStringDict = new Dictionary<string, int>();
-         private Dictionary<string, TokenMap<int, int>> secondaryStringDict = new Dictionary<string, TokenMap<int, int>>();
+         private Dictionary<string, int> secondaryStringDict = new Dictionary<string, int>();
 
          public TokenDictionary()
          {
@@ -515,20 +532,12 @@ namespace WhatsAppApi.Helper
              }
              for (int j = 0; j < TokenDictionary.secondaryStrings.Length; j++)
              {
-                 string[] array = TokenDictionary.secondaryStrings[j];
-                 for (int k = 0; k < array.Length; k++)
-                 {
-                     string text2 = array[k];
-                     if (text2 != null)
-                     {
-                         this.secondaryStringDict.Add(text2, new TokenMap<int, int>
-                             {
-                                 First = j + 236,
-                                 Second = k
-                             });
-                     }
-                 }
-             }
+                string text = TokenDictionary.secondaryStrings[j];
+                if (text != null)
+                {
+                    this.secondaryStringDict.Add(text, j);
+                }
+            }
          }
 
          public bool TryGetToken(string str, ref int subdict, ref int token)
@@ -537,49 +546,38 @@ namespace WhatsAppApi.Helper
              {
                  return true;
              }
-             TokenMap<int, int> tokenMap;
-             if (this.secondaryStringDict.TryGetValue(str, out tokenMap))
+             if (this.secondaryStringDict.TryGetValue(str, out token))
              {
-                 subdict = tokenMap.First;
-                 token = tokenMap.Second;
+                 subdict = 0;
                  return true;
              }
              return false;
          }
+
          public void GetToken(int token, ref int subdict, ref string str)
          {
-             string[] array = null;
-             if (subdict >= 0)
-             {
-                 if (subdict >= TokenDictionary.secondaryStrings.Length)
-                 {
-                     throw new Exception("Invalid subdictionary " + subdict);
-                 }
-                 array = TokenDictionary.secondaryStrings[subdict];
-             }
-             else
-             {
-                 if (token >= 236 && token < 236 + TokenDictionary.secondaryStrings.Length)
-                 {
-                     subdict = token - 236;
-                 }
-                 else
-                 {
-                     array = TokenDictionary.primaryStrings;
-                 }
-             }
-             if (array != null)
-             {
-                 if (token < 0 || token > array.Length)
-                 {
-                     throw new Exception("Invalid token " + token);
-                 }
-                 str = array[token];
-                 if (str == null)
-                 {
-                     throw new Exception("invalid token/length in getToken");
-                 }
-             }
+            if (subdict < 0 && token>=236 && token < (236 + secondaryStrings.Length))
+            {
+                subdict = 0;
+            }
+
+            string[] tokenMap;
+            if (subdict >= 0) {
+                tokenMap = secondaryStrings;
+            } else {
+                tokenMap = primaryStrings;
+            }
+
+            if (token < 0 || token > tokenMap.Length) {
+                return; //fail
+            }
+
+            str = tokenMap[token];
+
+            if (str == null) {
+                throw new Exception("Invalid token/length in GetToken");
+            }
+            
          }
      }
 }

@@ -254,7 +254,7 @@ namespace WhatsAppApi.Helper
         /// Generate the keysets for ourself
         /// </summary>
         /// <returns></returns>
-        public bool sendSetPreKeys(bool isnew = false)
+        public bool SendSetPreKeys(bool isnew = false)
         {
             uint registrationId             = 0;
             if (!isnew) registrationId      = (uint)this.GetLocalRegistrationId();

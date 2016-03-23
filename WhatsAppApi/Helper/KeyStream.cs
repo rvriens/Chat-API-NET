@@ -46,7 +46,7 @@ namespace WhatsAppApi.Helper
             return array2;
         }
 
-        public void DecodeMessage(byte[] buffer, int macOffset, int offset, int length)
+        public byte[] DecodeMessage(byte[] buffer, int macOffset, int offset, int length)
         {
             byte[] array = this.ComputeMac(buffer, offset, length);
             for (int i = 0; i < 4; i++)
@@ -57,13 +57,15 @@ namespace WhatsAppApi.Helper
                 }
             }
             this.rc4.Cipher(buffer, offset, length);
+            return buffer;
         }
 
-        public void EncodeMessage(byte[] buffer, int macOffset, int offset, int length)
+        public byte[] EncodeMessage(byte[] buffer, int macOffset, int offset, int length)
         {
             this.rc4.Cipher(buffer, offset, length);
             byte[] array = this.ComputeMac(buffer, offset, length);
             Array.Copy(array, 0, buffer, macOffset, 4);
+            return buffer;
         }
 
         private byte[] ComputeMac(byte[] buffer, int offset, int length)
