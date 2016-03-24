@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -19,20 +19,25 @@ namespace WhatsTest
 {
     internal class Program
     {
-        private static WhatsApp _wa;
+        // DEMO STORE SHOULD BE DATABASE OR PERMANENT MEDIA IN REAL CASE
+        static IDictionary<string, axolotl_identities_object> axolotl_identities = new Dictionary<string, axolotl_identities_object>();
+        static IDictionary<uint, axolotl_prekeys_object> axolotl_prekeys = new Dictionary<uint, axolotl_prekeys_object>();
+        static IDictionary<uint, axolotl_sender_keys_object> axolotl_sender_keys = new Dictionary<uint, axolotl_sender_keys_object>();
+        static IDictionary<string, axolotl_sessions_object> axolotl_sessions = new Dictionary<string, axolotl_sessions_object>();
+        static IDictionary<uint, axolotl_signed_prekeys_object> axolotl_signed_prekeys = new Dictionary<uint, axolotl_signed_prekeys_object>();
 
+        static WhatsApp wa = null;
         private static void Main(string[] args)
         {
             var tmpEncoding = Encoding.UTF8;
             System.Console.OutputEncoding = Encoding.Default;
             System.Console.InputEncoding = Encoding.Default;
-            string nickname = "";
-			      string sender   = ""; // Mobile number with country code (but without + or 00)
-			      string password = "";//v2 password
-            string target   = "";// Mobile number to send the message to
+            string nickname = "WhatsApiNet";
+            string sender = "70178717679"; // Mobile number with country code (but without + or 00)
+            string password = "VPU^^^^^^^^^^^^CdM=";//v2 password
+            string target = "70125223790";// Mobile number to send the message to
 
-            WhatsApp wa = new WhatsApp(sender, password, nickname, true);
-            _wa = wa;
+            wa = new WhatsApp(sender, password, nickname, true);
 
             //event bindings
             wa.OnLoginSuccess += wa_OnLoginSuccess;
@@ -59,6 +64,33 @@ namespace WhatsTest
             wa.OnGetStatus += wa_OnGetStatus;
             wa.OnGetPrivacySettings += wa_OnGetPrivacySettings;
             DebugAdapter.Instance.OnPrintDebug += Instance_OnPrintDebug;
+            wa.SendGetServerProperties();
+            //ISessionStore AxolotlStore
+            wa.OnstoreSession += wa_OnstoreSession;
+            wa.OnloadSession += wa_OnloadSession;
+            wa.OngetSubDeviceSessions += wa_OngetSubDeviceSessions;
+            wa.OncontainsSession += wa_OncontainsSession;
+            wa.OndeleteSession += wa_OndeleteSession;
+            // IPreKeyStore AxolotlStore
+            wa.OnstorePreKey += wa_OnstorePreKey;
+            wa.OnloadPreKey += wa_OnloadPreKey;
+            wa.OnloadPreKeys += wa_OnloadPreKeys;
+            wa.OncontainsPreKey += wa_OncontainsPreKey;
+            wa.OnremovePreKey += wa_OnremovePreKey;
+            // ISignedPreKeyStore AxolotlStore
+            wa.OnstoreSignedPreKey += wa_OnstoreSignedPreKey;
+            wa.OnloadSignedPreKey += wa_OnloadSignedPreKey;
+            wa.OnloadSignedPreKeys += wa_OnloadSignedPreKeys;
+            wa.OncontainsSignedPreKey += wa_OncontainsSignedPreKey;
+            wa.OnremoveSignedPreKey += wa_OnremoveSignedPreKey;
+            // IIdentityKeyStore AxolotlStore
+            wa.OngetIdentityKeyPair += wa_OngetIdentityKeyPair;
+            wa.OngetLocalRegistrationId += wa_OngetLocalRegistrationId;
+            wa.OnisTrustedIdentity += wa_OnisTrustedIdentity;
+            wa.OnsaveIdentity += wa_OnsaveIdentity;
+            wa.OnstoreLocalData += wa_OnstoreLocalData;
+            // Error Notification ErrorAxolotl
+            wa.OnErrorAxolotl += wa_OnErrorAxolotl;
 
             wa.Connect();
 
@@ -74,16 +106,19 @@ namespace WhatsTest
                 catch (Exception) { };
             }
 
-      wa.Login(nextChallenge);
-			wa.SendGetServerProperties ();
+            wa.Login(nextChallenge);
+            wa.SendGetPrivacyList();
+            wa.SendGetClientConfig();
 
-      ProcessChat(wa, target);
-      Console.ReadKey();
-			wa.SendMessage (sender, "test");
-            while (true)
+            if (wa.LoadPreKeys() == null)
+                wa.SendSetPreKeys(true);
+
+            ProcessChat(wa, target);
+            Console.ReadKey();
+        }
+        static void wa_OnGetMessageReadedClient(string from, string id)
             {
-				wa.pollMessage ();
-			}
+            Console.WriteLine("Message {0} to {1} read by client", id, from);
         }
 
         static void Instance_OnPrintDebug(object value)
@@ -147,9 +182,10 @@ namespace WhatsTest
             File.WriteAllBytes(string.Format("{0}.vcf", name), data);
         }
 
-        static void wa_OnGetMessageLocation(ProtocolTreeNode locationNode, string from, string id, double lon, double lat, string url, string name, byte[] preview, string userName)
+        // string User new
+        static void wa_OnGetMessageLocation(ProtocolTreeNode locationNode, string from, string id, double lon, double lat, string url, string name, byte[] preview, string User)
         {
-            Console.WriteLine("Got location from {0} username {1} ({1}, {2})", from, userName, lat, lon);
+            Console.WriteLine("Got location from {0} ({1}, {2})", from, lat, lon);
             if(!string.IsNullOrEmpty(name))
             {
                 Console.WriteLine("\t{0}", name);
@@ -159,7 +195,21 @@ namespace WhatsTest
 
         static void wa_OnGetMessageVideo(ProtocolTreeNode mediaNode, string from, string id, string fileName, int fileSize, string url, byte[] preview, string name)
         {
-            Console.WriteLine("Got video from {0} name{1}", from, name, fileName);
+            Console.WriteLine("Got video from {0}", from, fileName);
+            OnGetMedia(fileName, url, preview);
+        }
+
+        // string name new
+        static void wa_OnGetMessageAudio(ProtocolTreeNode mediaNode, string from, string id, string fileName, int fileSize, string url, byte[] preview, string name)
+        {
+            Console.WriteLine("Got audio from {0}", from, fileName);
+            OnGetMedia(fileName, url, preview);
+        }
+
+        // string name new
+        static void wa_OnGetMessageImage(ProtocolTreeNode mediaNode, string from, string id, string fileName, int size, string url, byte[] preview, string name)
+        {
+            Console.WriteLine("Got image from {0}", from, fileName);
             OnGetMedia(fileName, url, preview);
         }
 
@@ -172,18 +222,6 @@ namespace WhatsTest
             {
                 wc.DownloadFileAsync(new Uri(url), file, null);
             }
-        }
-
-        static void wa_OnGetMessageAudio(ProtocolTreeNode mediaNode, string from, string id, string fileName, int fileSize, string url, byte[] preview, string name)
-        {
-            Console.WriteLine("Got audio from {0} name{1}", from, name, fileName);
-            OnGetMedia(fileName, url, preview);
-        }
-
-        static void wa_OnGetMessageImage(ProtocolTreeNode mediaNode, string from, string id, string fileName, int size, string url, byte[] preview, string name)
-        {
-            Console.WriteLine("Got image from {0} name{1}", from, name, fileName);
-            OnGetMedia(fileName, url, preview);
         }
 
         static void wa_OnGetPaused(string from)
@@ -199,11 +237,6 @@ namespace WhatsTest
         static void wa_OnGetLastSeen(string from, DateTime lastSeen)
         {
             Console.WriteLine("{0} last seen on {1}", from, lastSeen.ToString());
-        }
-
-        static void wa_OnGetMessageReadedClient(string from, string id)
-        {
-            Console.WriteLine("Message {0} to {1} readed by client", id, from);
         }
 
         static void wa_OnGetMessageReceivedServer(string from, string id)
@@ -227,7 +260,7 @@ namespace WhatsTest
 
         static void wa_OnGetPresence(string from, string type)
         {
-            //Console.WriteLine("Presence from {0}: {1}", from, type);
+            Console.WriteLine("Presence from {0}: {1}", from, type);
         }
 
         static void wa_OnNotificationPicture(string type, string jid, string id)
@@ -242,7 +275,7 @@ namespace WhatsTest
 
             if (message.StartsWith("echo "))
             {
-                _wa.SendMessage(from, message.Substring(5));
+                wa.SendMessage(from, message.Substring(5));
             }
         }
 
@@ -253,16 +286,15 @@ namespace WhatsTest
 
         private static void wa_OnLoginSuccess(string phoneNumber, byte[] data)
         {
-            //Console.WriteLine("Login success. Next password:");
+            Console.WriteLine("Login success. Next password:");
             string sdata = Convert.ToBase64String(data);
-            //Console.WriteLine(sdata);
+            Console.WriteLine(sdata);
             try
             {
                 File.WriteAllText(getDatFileName(phoneNumber), sdata);
             }
             catch (Exception) { }
         }
-
 
         private static void ProcessChat(WhatsApp wa, string dst)
         {
@@ -324,5 +356,334 @@ namespace WhatsTest
                 }
            }
         }
+
+        // ALL NE REQUIRED INTERFACES FOR AXOLOTL ARE BELOW
+        /// <summary>
+        /// recieve all errormessgaes from the Axolotl process to record
+        /// </summary>
+        /// <param name="ErrorMessage"></param>
+        static void wa_OnErrorAxolotl(string ErrorMessage)
+        {
+        }
+
+        #region DATABASE BINDING FOR IIdentityKeyStore
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="recipientId"></param>
+        /// <param name="identityKey"></param>
+        static bool wa_OnsaveIdentity(string recipientId, byte[] identityKey)
+        {
+            if (axolotl_identities.ContainsKey(recipientId))
+                axolotl_identities.Remove(recipientId);
+
+            axolotl_identities.Add(recipientId, new axolotl_identities_object(){
+                    recipient_id = recipientId,
+                    public_key  = identityKey
+                });
+
+            return true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="recipientId"></param>
+        /// <param name="identityKey"></param>
+        /// <returns></returns>
+        static bool wa_OnisTrustedIdentity(string recipientId, byte[] identityKey)
+        {
+            axolotl_identities_object trusted;
+            axolotl_identities.TryGetValue(recipientId, out trusted);
+            return true; // (trusted == null || trusted.public_key.Equals(identityKey));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        static uint wa_OngetLocalRegistrationId()
+        {
+            axolotl_identities_object identity;
+            axolotl_identities.TryGetValue("-1", out identity);
+            return (identity == null) ? 000000 : uint.Parse(identity.registration_id);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        static List<byte[]> wa_OngetIdentityKeyPair()
+        {
+            List<byte[]> result = new List<byte[]> { };
+            axolotl_identities_object identity;
+            axolotl_identities.TryGetValue("-1", out identity);
+            if (identity != null){
+                result.Add(identity.public_key);
+                result.Add(identity.private_key);
+            }
+
+            if (result.Count == 0)
+                return null;
+
+            return result;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="registrationId"></param>
+        /// <param name="identityKeyPair"></param>
+        static void wa_OnstoreLocalData(uint registrationId, byte[] publickey, byte[] privatekey)
+        {
+            if (axolotl_identities.ContainsKey("-1"))
+                axolotl_identities.Remove("-1");
+
+            axolotl_identities.Add("-1", new axolotl_identities_object(){
+                recipient_id = "-1",
+                registration_id = registrationId.ToString(),
+                public_key = publickey,
+                private_key = privatekey
+            });
+
+        }
+        #endregion
+
+        #region DATABASE BINDING FOR ISignedPreKeyStore
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="preKeyId"></param>
+        static void wa_OnremoveSignedPreKey(uint preKeyId)
+        {
+            if (axolotl_signed_prekeys.ContainsKey(preKeyId))
+                axolotl_signed_prekeys.Remove(preKeyId);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="preKeyId"></param>
+        /// <returns></returns>
+        static bool wa_OncontainsSignedPreKey(uint preKeyId)
+        {
+            axolotl_signed_prekeys_object prekey;
+            axolotl_signed_prekeys.TryGetValue(preKeyId, out prekey);
+            return (prekey == null) ? false : true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        static List<byte[]> wa_OnloadSignedPreKeys()
+        {
+            List<byte[]> result = new List<byte[]> { };
+            foreach (axolotl_signed_prekeys_object key in axolotl_signed_prekeys.Values) 
+                result.Add(key.record);
+
+            if (result.Count == 0)
+                return null;
+
+            return result;
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="preKeyId"></param>
+        /// <returns></returns>
+        static byte[] wa_OnloadSignedPreKey(uint preKeyId)
+        {
+            axolotl_signed_prekeys_object prekey;
+            axolotl_signed_prekeys.TryGetValue(preKeyId, out prekey);
+            return (prekey == null) ? new byte[] { } : prekey.record;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="signedPreKeyId"></param>
+        /// <param name="signedPreKeyRecord"></param>
+        static void wa_OnstoreSignedPreKey(uint signedPreKeyId, byte[] signedPreKeyRecord)
+        {
+            if (axolotl_signed_prekeys.ContainsKey(signedPreKeyId))
+                axolotl_signed_prekeys.Remove(signedPreKeyId);
+
+            axolotl_signed_prekeys.Add(signedPreKeyId, new axolotl_signed_prekeys_object(){
+                prekey_id = signedPreKeyId,
+                record = signedPreKeyRecord
+            });
+
+        }
+        #endregion
+
+        #region DATABASE BINDING FOR IPreKeyStore
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="preKeyId"></param>
+        static void wa_OnremovePreKey(uint preKeyId)
+        {
+            if (axolotl_prekeys.ContainsKey(preKeyId))
+                axolotl_prekeys.Remove(preKeyId);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="preKeyId"></param>
+        /// <returns></returns>
+        static bool wa_OncontainsPreKey(uint preKeyId)
+        {
+            axolotl_prekeys_object prekey;
+            axolotl_prekeys.TryGetValue(preKeyId, out prekey);
+            return (prekey == null) ? false : true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="preKeyId"></param>
+        /// <returns></returns>
+        static byte[] wa_OnloadPreKey(uint preKeyId)
+        {
+            axolotl_prekeys_object prekey;
+            axolotl_prekeys.TryGetValue(preKeyId, out prekey);
+            return (prekey == null) ? new byte[] { } : prekey.record;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        static List<byte[]> wa_OnloadPreKeys()
+        {
+            List<byte[]> result = new List<byte[]> { };
+            foreach (axolotl_prekeys_object key in axolotl_prekeys.Values)
+                result.Add(key.record);
+
+            if (result.Count == 0)
+                return null;
+
+            return result;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="prekeyId"></param>
+        /// <param name="preKeyRecord"></param>
+        static void wa_OnstorePreKey(uint prekeyId, byte[] preKeyRecord)
+        {
+            if (axolotl_prekeys.ContainsKey(prekeyId))
+                axolotl_prekeys.Remove(prekeyId);
+
+            axolotl_prekeys.Add(prekeyId, new axolotl_prekeys_object()
+            {
+                prekey_id = prekeyId.ToString(),
+                record = preKeyRecord
+            });
+        }
+        #endregion
+
+        #region DATABASE BINDING FOR ISessionStore
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="recipientId"></param>
+        /// <param name="deviceId"></param>
+        static void wa_OndeleteSession(string recipientId, uint deviceId)
+        {
+            if (axolotl_sessions.ContainsKey(recipientId))
+                axolotl_sessions.Remove(recipientId);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="recipientId"></param>
+        /// <param name="deviceId"></param>
+        /// <returns></returns>
+        static bool wa_OncontainsSession(string recipientId, uint deviceId)
+        {
+            axolotl_sessions_object session;
+            axolotl_sessions.TryGetValue(recipientId, out session);
+            return (session == null) ? false : true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="recipientId"></param>
+        /// <returns></returns>
+        static List<uint> wa_OngetSubDeviceSessions(string recipientId)
+        {
+            List<uint> result = new List<uint> { };
+            foreach (axolotl_sessions_object key in axolotl_sessions.Values) 
+                    result.Add(key.device_id);
+
+            return result;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="recipientId"></param>
+        /// <param name="deviceId"></param>
+        /// <returns></returns>
+        static byte[] wa_OnloadSession(string recipientId, uint deviceId)
+        {
+            axolotl_sessions_object session;
+            axolotl_sessions.TryGetValue(recipientId, out session);
+            return (session == null) ? new byte[] { } : session.record;
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="recipientId"></param>
+        /// <param name="deviceId"></param>
+        /// <param name="sessionRecord"></param>
+        static void wa_OnstoreSession(string recipientId, uint deviceId, byte[] sessionRecord)
+        {
+
+            if (axolotl_sessions.ContainsKey(recipientId))
+                axolotl_sessions.Remove(recipientId);
+
+            axolotl_sessions.Add(recipientId, new axolotl_sessions_object(){
+                device_id = deviceId,
+                recipient_id = recipientId,
+                record = sessionRecord
+            });
+        }
+        #endregion
+    }
+
+    public class axolotl_identities_object {
+        public string recipient_id { get; set; }
+        public string registration_id { get; set; }
+        public byte[] public_key { get; set; }
+        public byte[] private_key { get; set; }
+    }
+    public class axolotl_prekeys_object {
+        public string prekey_id { get; set; }
+        public byte[] record { get; set; }
+
+    }
+    public class axolotl_sender_keys_object {
+        public uint sender_key_id { get; set; }
+        public byte[] record { get; set; }
+    }
+    public class axolotl_sessions_object {
+        public string recipient_id { get; set; }
+        public uint device_id { get; set; }
+        public byte[] record { get; set; }
+    }
+    public class axolotl_signed_prekeys_object {
+        public uint prekey_id { get; set; }
+        public byte[] record { get; set; }
     }
 }

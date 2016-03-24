@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -20,7 +21,7 @@ namespace WhatsAppApi.Register
 
         public static string GetToken(string number, string platform)
         {
-            return WaToken.GenerateToken(number, platform);
+            return WaToken.GenerateToken(number, WhatsConstants.Platform );
         }
 
         public static bool RequestCode(string phoneNumber, out string password, string method = "sms", string id = null)
@@ -86,7 +87,7 @@ namespace WhatsAppApi.Register
                 }
                 return (response.GetJsonValue("status") == "sent");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 response = e.Message;
                 return false;

@@ -72,7 +72,7 @@ array<Byte>^ mycurve25519::Curve25519Native::generatePublicKey(array<Byte>^ priv
 	curve25519_donna(publicKeyBytes, privateKeyBytes, basepoint);
 
 	array<Byte>^ publicKey = gcnew array<Byte>(CURVE25519_PUB_KEY_LEN);
-	Marshal::Copy((IntPtr)privateKeyBytes, publicKey, 0, CURVE25519_PUB_KEY_LEN);
+	Marshal::Copy((IntPtr)publicKeyBytes, publicKey, 0, CURVE25519_PUB_KEY_LEN);
 	delete publicKeyBytes;
 	return publicKey;
 }

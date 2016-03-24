@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -61,7 +61,7 @@ namespace WhatsAppApi.Settings
         /// <summary>
         /// The whatsapp version the client complies to
         /// </summary>
-        public const string WhatsAppVer = "2.12.440"; //"2.12.391";
+        public const string WhatsAppVer = "2.12.440";
 
         /// <summary>
         /// OS Version
@@ -77,7 +77,7 @@ namespace WhatsAppApi.Settings
         /// BuildVersion
         /// </summary>
         public const string BuildVersion = "JLS36C";
-
+        
         /// <summary>
         /// Platform
         /// </summary>
@@ -86,19 +86,7 @@ namespace WhatsAppApi.Settings
         /// <summary>
         /// The useragent used for http requests
         /// </summary>
-		public const string UserAgent = "WhatsApp/2.12.440 Android/4.3 Device/Xiaomi-HM_1SW"; //"WhatsApp/2.12.391 Android/4.3 Device/Xiaomi";
-
-
-
-
-
-        /*
-            "v": "2.12.29",
-            "r": "S40-2.12.29",
-            "u": "WhatsApp/2.12.49 S40Version/14.26 Device/Nokia302",
-            "t": "PdA2DJyKoUrwLw1Bg6EIhzh502dF9noR9uFCllGk1413401214298{phone}",
-            "d": "Nokia302"
-        */
+		public const string UserAgent = "WhatsApp/2.12.440 Android/4.3 Device/Xiaomi-HM_1SW";
 
         #endregion
 

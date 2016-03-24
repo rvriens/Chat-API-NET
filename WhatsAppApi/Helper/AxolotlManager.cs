@@ -11,6 +11,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using libaxolotl.ecc;
 using libaxolotl.util;
+using System.Security.Cryptography;
+// temporary oly for testing
+using libaxolotl.state.impl;
 
 namespace WhatsAppApi.Helper
 {
@@ -29,7 +32,6 @@ namespace WhatsAppApi.Helper
         /// </summary>
         public AxolotlManager()
         {
-
         }
 
         /// <summary>
@@ -58,8 +60,6 @@ namespace WhatsAppApi.Helper
 
                         // now do the work return nodelist
                         sessionBuilder.process(preKeyBundle);
-                       // SignedPreKeyRecord rc = new SignedPreKeyRecord(signedPreKeyId, KeyHelper.getTime(), bobSignedPreKeyPair, signedPreKeySig);
-                      //  this.StoreSignedPreKey(signedPreKeyId,rc);
 
                         if (pending_nodes.ContainsKey(ExtractNumber(jid))){
                             var pendingNodes = pending_nodes[ExtractNumber(jid)].ToArray();
@@ -141,7 +141,7 @@ namespace WhatsAppApi.Helper
                             break;
                     }
 
-                    Helper.DebugAdapter.Instance.fireOnPrintDebug("info : " + string.Format("Decrypted message with {0} if from {1}", node.GetAttribute("id"), author));
+                    Helper.DebugAdapter.Instance.fireOnPrintDebug("info : " + string.Format("Decrypted message with {0} id from {1}", node.GetAttribute("id"), author));
                     return rtnNode;
                 }
             }
@@ -160,7 +160,7 @@ namespace WhatsAppApi.Helper
         /// <param name="skip_unpad"></param>
         public object decryptMessage(string from, byte[] ciphertext, string type, string id,
                                     string t, string retry_from = null, bool skip_unpad = false){
-            string version = "1";
+            string version = "2";
 
             #region pkmsg routine 
             if (type == "pkmsg")
@@ -171,11 +171,13 @@ namespace WhatsAppApi.Helper
                 {
                     PreKeyWhisperMessage preKeyWhisperMessage = new PreKeyWhisperMessage(ciphertext);
                     SessionCipher sessionCipher = getSessionCipher(ExtractNumber(from));
-                    var plaintext = sessionCipher.decrypt(preKeyWhisperMessage);
-                     if (version == "2" && !skip_unpad)
-                         return unpadV2Plaintext(plaintext.ToString());
+                    return sessionCipher.decrypt(preKeyWhisperMessage);
+                   // if (version == "2" && !skip_unpad)
+                   //  return unpadV2Plaintext(plaintext.ToString());
                 }
                 catch (Exception e){
+                  //  ErrorAxolotl(e.Message);
+                    return false;
                 }
             }
             #endregion
@@ -189,9 +191,9 @@ namespace WhatsAppApi.Helper
                 {
                     PreKeyWhisperMessage preKeyWhisperMessage = new PreKeyWhisperMessage(ciphertext);
                     SessionCipher sessionCipher = getSessionCipher(ExtractNumber(from));
-                    var plaintext = sessionCipher.decrypt(preKeyWhisperMessage);
-                    if (version == "2" && !skip_unpad)
-                        return unpadV2Plaintext(plaintext.ToString());
+                    return sessionCipher.decrypt(preKeyWhisperMessage);
+                    // if (version == "2" && !skip_unpad)
+                    //     return unpadV2Plaintext(plaintext.ToString());
                 }
                 catch (Exception e)
                 {
@@ -260,44 +262,48 @@ namespace WhatsAppApi.Helper
             if (!isnew) registrationId      = (uint)this.GetLocalRegistrationId();
             else registrationId             = libaxolotl.util.KeyHelper.generateRegistrationId(true);
             Random random                   = new Random();
-            uint randomid                   =  (uint)libaxolotl.util.KeyHelper.getRandomSequence(65536);
+            uint randomid                   = (uint)libaxolotl.util.KeyHelper.getRandomSequence(5000);//65536
             IdentityKeyPair identityKeyPair = libaxolotl.util.KeyHelper.generateIdentityKeyPair();
             byte[] privateKey               = identityKeyPair.getPrivateKey().serialize();
-            byte[] publicKey                = identityKeyPair.getPublicKey().serialize();
+            byte[] publicKey                = identityKeyPair.getPublicKey().getPublicKey().serialize();
             IList<PreKeyRecord> preKeys     = libaxolotl.util.KeyHelper.generatePreKeys((uint)random.Next(), 200);
             SignedPreKeyRecord signedPreKey = libaxolotl.util.KeyHelper.generateSignedPreKey(identityKeyPair, randomid);
             PreKeyRecord lastResortKey      = libaxolotl.util.KeyHelper.generateLastResortPreKey();
+
             this.StorePreKeys(preKeys);
             this.StoreLocalData(registrationId, identityKeyPair.getPublicKey().serialize(), identityKeyPair.getPrivateKey().serialize());
             this.StoreSignedPreKey(signedPreKey.getId(), signedPreKey);
+            // FOR INTERNAL TESTING ONLY
+            //this.InMemoryTestSetup(identityKeyPair, registrationId);
+            
 
-            List<ProtocolTreeNode> preKeyNodes = new List<ProtocolTreeNode>();
+            ProtocolTreeNode[] preKeyNodes = new ProtocolTreeNode[200];
             for (int i = 0; i < 200; i++)
             {
-                byte[] prekeyId             = adjustId(preKeys[i].getId().ToString());
-                byte[] prekey               = preKeys[i].getKeyPair().getPublicKey().serialize().Skip(1).ToArray(); 
+                byte[] prekeyId             = adjustId(preKeys[i].getId().ToString()).Skip(1).ToArray();
+                byte[] prekey               = preKeys[i].getKeyPair().getPublicKey().serialize().Skip(1).ToArray();
                 ProtocolTreeNode NodeId     = new ProtocolTreeNode("id", null, null, prekeyId);
                 ProtocolTreeNode NodeValue  = new ProtocolTreeNode("value", null, null, prekey);
-                preKeyNodes.Add(new ProtocolTreeNode("key", null, new[] { NodeId, NodeValue }, null));
+                preKeyNodes[i]              = new ProtocolTreeNode("key", null, new ProtocolTreeNode[] { NodeId, NodeValue }, null);
             }
 
             ProtocolTreeNode registration   = new ProtocolTreeNode("registration", null, null, adjustId(registrationId.ToString()));
-            ProtocolTreeNode identity       = new ProtocolTreeNode("identity", null, null, publicKey.Skip(1).ToArray());
             ProtocolTreeNode type           = new ProtocolTreeNode("type", null, null, new byte[] { Curve.DJB_TYPE });
-            ProtocolTreeNode list           = new ProtocolTreeNode("list", null, preKeyNodes.ToArray(), null);
-            ProtocolTreeNode sid            = new ProtocolTreeNode("id", null, null, adjustId(signedPreKey.getId().ToString()));
-            ProtocolTreeNode value          = new ProtocolTreeNode("value", null, null, signedPreKey.getKeyPair().getPublicKey().serialize().Skip(1).ToArray()); 
+            ProtocolTreeNode list           = new ProtocolTreeNode("list", null, preKeyNodes, null);
+            ProtocolTreeNode sid            = new ProtocolTreeNode("id", null, null, adjustId(signedPreKey.getId().ToString(), true));
+            ProtocolTreeNode identity       = new ProtocolTreeNode("identity", null, null, identityKeyPair.getPublicKey().getPublicKey().serialize().Skip(1).ToArray());
+            ProtocolTreeNode value          = new ProtocolTreeNode("value", null, null, signedPreKey.getKeyPair().getPublicKey().serialize().Skip(1).ToArray());
             ProtocolTreeNode signature      = new ProtocolTreeNode("signature", null, null, signedPreKey.getSignature());
-            ProtocolTreeNode secretKey      = new ProtocolTreeNode("skey", null, new[] { sid, value, signature }, null);
+            ProtocolTreeNode secretKey      = new ProtocolTreeNode("skey", null, new ProtocolTreeNode[] { sid, value, signature }, null);
 
             String id = TicketManager.GenerateId();
             Helper.DebugAdapter.Instance.fireOnPrintDebug(string.Format("axolotl id = {0}", id));
 
-            ProtocolTreeNode Node = new ProtocolTreeNode("iq", new[] {
+            ProtocolTreeNode Node = new ProtocolTreeNode("iq", new KeyValue[] {
                     new KeyValue("id", id),
-                    new KeyValue("xmlns", "encrypt"),
+                    new KeyValue("to", "s.whatsapp.net"),
                     new KeyValue("type", "set"),
-                    new KeyValue("to", "s.whatsapp.net")
+                    new KeyValue("xmlns", "encrypt")
                    }, new ProtocolTreeNode[] { identity, registration, type, list, secretKey }, null);
 
             this.SendNode(Node);
@@ -433,14 +439,18 @@ namespace WhatsAppApi.Helper
         /// 
         /// </summary>
         /// <param name="id"></param>
-        public byte[] adjustId(String id)
+        public byte[] adjustId(String id, bool limitsix = false)
         {
-            long idx = long.Parse(id);
+            uint idx = uint.Parse(id);
             byte[] bytes  = BitConverter.GetBytes(idx);
             uint atomSize = BitConverter.ToUInt32(bytes, 0);
             Array.Reverse(bytes, 0, bytes.Length);
 
             string data = bin2Hex(bytes);
+
+            if (!string.IsNullOrEmpty(data) && limitsix)
+             data = (data.Length <= 6) ? data : data.Substring(data.Length - 6);
+
             while (data.Length < 6){
                 data = "0" + data;
             }
@@ -454,6 +464,9 @@ namespace WhatsAppApi.Helper
         /// <returns></returns>
         public byte[] hex2Bin(String hex)
         {
+           // return (from i in Enumerable.Range(0, hex.Length / 2)
+           //          select Convert.ToByte(hex.Substring(i * 2, 2), 16)).ToArray();
+
             int NumberChars = hex.Length;
             byte[] bytes = new byte[NumberChars / 2];
             for (int i = 0; i < NumberChars; i += 2)
@@ -463,12 +476,17 @@ namespace WhatsAppApi.Helper
 
         static string bin2Hex(byte[] bin)
         {
-            StringBuilder sb = new StringBuilder(bin.Length * 2);
+           return BitConverter.ToString(bin).Replace("-", string.Empty).ToLower();
+            #region old code
+            /*
+            StringBuilder sb = new StringBuilder(bin.Length *2);
             foreach (byte b in bin)
             {
                 sb.Append(b.ToString("x").PadLeft(2, '0'));
             }
             return sb.ToString();
+            */
+            #endregion
         }
 
         /// <summary>
@@ -495,7 +513,20 @@ namespace WhatsAppApi.Helper
             return v2plaintext.Substring(3,-1);
         }
 
+        #region raise a delegates error event to the main aplication
+        public event OnErrorAxolotlDelegate OnErrorAxolotl;
+        public void ErrorAxolotl(String ErrorMessage)
+        {
+            if (this.OnErrorAxolotl != null)
+            {
+                this.OnErrorAxolotl(ErrorMessage);
+            }
+        }
 
+        public delegate void OnErrorAxolotlDelegate(string ErrorMessage);
+        #endregion
+
+        #region Public Interfaces for AxolotlStore
         #region session event and delegates ISessionStore
         public event OnstoreSessionDataDelegate OnstoreSession;
         public void StoreSession(AxolotlAddress address, SessionRecord record)
@@ -801,7 +832,103 @@ namespace WhatsAppApi.Helper
         public delegate byte[] OnloadSenderKeyDelegate(int senderKeyId);
         public delegate void OnremoveSenderKeyDelegate(int senderKeyId);
         public delegate bool OncontainsSenderKeyDelegate(int senderKeyId);
+        #endregion
+        #endregion
 
+        #region TESTING IN MEMORY STORE
+        /*
+        private  InMemoryPreKeyStore preKeyStore             = new InMemoryPreKeyStore();
+        private  InMemorySessionStore sessionStore           = new InMemorySessionStore();
+        private  InMemorySignedPreKeyStore signedPreKeyStore = new InMemorySignedPreKeyStore();
+        private  InMemoryIdentityKeyStore identityKeyStore;
+
+        public List<byte[]> LoadPreKeys() { return null; }
+        public void RemoveAllPreKeys() { }
+        public void StorePreKeys(IList<PreKeyRecord> keys) { }
+        public void StoreLocalData(uint registrationId, byte[] publickey, byte[] privatekey) { }
+        public void InMemoryTestSetup(IdentityKeyPair identityKeyPair, uint registrationId)
+        {
+            this.identityKeyStore = new InMemoryIdentityKeyStore(identityKeyPair, registrationId);
+        }
+
+        public IdentityKeyPair GetIdentityKeyPair()
+        {
+            return identityKeyStore.GetIdentityKeyPair();
+        }
+        public uint GetLocalRegistrationId()
+        {
+            return identityKeyStore.GetLocalRegistrationId();
+        }
+        public bool SaveIdentity(String name, IdentityKey identityKey)
+        {
+            identityKeyStore.SaveIdentity(name, identityKey);
+            return true;
+        }
+        public bool IsTrustedIdentity(String name, IdentityKey identityKey)
+        {
+            return identityKeyStore.IsTrustedIdentity(name, identityKey);
+        }
+        public PreKeyRecord LoadPreKey(uint preKeyId)
+        {
+            return preKeyStore.LoadPreKey(preKeyId);
+        }
+        public void StorePreKey(uint preKeyId, PreKeyRecord record)
+        {
+            preKeyStore.StorePreKey(preKeyId, record);
+        }
+        public bool ContainsPreKey(uint preKeyId)
+        {
+            return preKeyStore.ContainsPreKey(preKeyId);
+        }
+        public void RemovePreKey(uint preKeyId)
+        {
+            preKeyStore.RemovePreKey(preKeyId);
+        }
+        public SessionRecord LoadSession(AxolotlAddress address)
+        {
+            return sessionStore.LoadSession(address);
+        }
+        public List<uint> GetSubDeviceSessions(String name)
+        {
+            return sessionStore.GetSubDeviceSessions(name);
+        }
+        public void StoreSession(AxolotlAddress address, SessionRecord record)
+        {
+            sessionStore.StoreSession(address, record);
+        }
+        public bool ContainsSession(AxolotlAddress address)
+        {
+            return sessionStore.ContainsSession(address);
+        }
+        public void DeleteSession(AxolotlAddress address)
+        {
+            sessionStore.DeleteSession(address);
+        }
+        public void DeleteAllSessions(String name)
+        {
+            sessionStore.DeleteAllSessions(name);
+        }
+        public SignedPreKeyRecord LoadSignedPreKey(uint signedPreKeyId)
+        {
+            return signedPreKeyStore.LoadSignedPreKey(signedPreKeyId);
+        }
+        public List<SignedPreKeyRecord> LoadSignedPreKeys()
+        {
+            return signedPreKeyStore.LoadSignedPreKeys();
+        }
+        public void StoreSignedPreKey(uint signedPreKeyId, SignedPreKeyRecord record)
+        {
+            signedPreKeyStore.StoreSignedPreKey(signedPreKeyId, record);
+        }
+        public bool ContainsSignedPreKey(uint signedPreKeyId)
+        {
+            return signedPreKeyStore.ContainsSignedPreKey(signedPreKeyId);
+        }
+        public void RemoveSignedPreKey(uint signedPreKeyId)
+        {
+            signedPreKeyStore.RemoveSignedPreKey(signedPreKeyId);
+        }
+        */
         #endregion
     }
 
@@ -847,6 +974,14 @@ namespace WhatsAppApi.Helper
            // for (int i = 0; i >> offset) & 0xFF);
             return b;
          }
+
+        public static void writetofile(string pathtofile, string data)
+        {
+            using (StreamWriter writer = new StreamWriter(pathtofile, true))
+            {
+                writer.WriteLine(data);
+            }       
+        }
     }
 
 }
