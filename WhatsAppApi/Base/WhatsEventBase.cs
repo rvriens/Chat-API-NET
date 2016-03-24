@@ -64,6 +64,15 @@ namespace WhatsAppApi
             }
         }
 
+        public event OnProcessMessageExceptionDelegate OnProcessMessageException;
+        protected void fireOnProcessMessageException(Exception ex, byte[] data, ProtocolTreeNode node)
+        {
+            if (this.OnProcessMessageException != null)
+            {
+                this.OnProcessMessageException(ex, data, node);
+            }
+        }
+
         public event OnGetMediaDelegate OnGetMessageImage;
         protected void fireOnGetMessageImage(ProtocolTreeNode mediaNode, string from, string id, string fileName, int fileSize, string url, byte[] preview, string name)
         {
@@ -306,6 +315,7 @@ namespace WhatsAppApi
         public delegate void StringDelegate(string data);
         public delegate void OnErrorDelegate(string id, string from, int code, string text);
         public delegate void OnGetMessageReceivedDelegate(string from, string id);
+        public delegate void OnProcessMessageExceptionDelegate(Exception ex, byte[] data, ProtocolTreeNode node);
         public delegate void OnNotificationPictureDelegate(string type, string jid, string id);
         public delegate void OnGetMessageDelegate(ProtocolTreeNode messageNode, string from, string id, string name, string message, bool receipt_sent);
         public delegate void OnGetPresenceDelegate(string from, string type);

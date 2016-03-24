@@ -33,9 +33,10 @@ namespace WhatsTest
             System.Console.OutputEncoding = Encoding.Default;
             System.Console.InputEncoding = Encoding.Default;
             string nickname = "WhatsApiNet";
-            string sender = "70178717679"; // Mobile number with country code (but without + or 00)
-            string password = "VPU^^^^^^^^^^^^CdM=";//v2 password
-            string target = "70125223790";// Mobile number to send the message to
+
+            string sender = "";
+            string password = "";
+            string target = "";
 
             wa = new WhatsApp(sender, password, nickname, true);
 
@@ -92,6 +93,9 @@ namespace WhatsTest
             // Error Notification ErrorAxolotl
             wa.OnErrorAxolotl += wa_OnErrorAxolotl;
 
+
+            wa.OnProcessMessageException += wa_On_ProcessMessageException;
+
             wa.Connect();
 
             string datFile = getDatFileName(sender);
@@ -109,6 +113,8 @@ namespace WhatsTest
             wa.Login(nextChallenge);
             wa.SendGetPrivacyList();
             wa.SendGetClientConfig();
+            //wa.SendSetPrivacySetting(ApiBase.VisibilityCategory.Status, ApiBase.VisibilitySetting.Everyone);
+            //wa.SendStatusUpdate("Hi"); // Hey there! I am using WhatsApp
 
             if (wa.LoadPreKeys() == null)
                 wa.SendSetPreKeys(true);
@@ -294,6 +300,11 @@ namespace WhatsTest
                 File.WriteAllText(getDatFileName(phoneNumber), sdata);
             }
             catch (Exception) { }
+        }
+
+        private static void wa_On_ProcessMessageException(Exception ex, byte[] data, ProtocolTreeNode node)
+        {
+            Console.WriteLine(String.Format("Exception: {0}, {1}", ex.Message, (node != null ? node.ToString() : "")));
         }
 
         private static void ProcessChat(WhatsApp wa, string dst)

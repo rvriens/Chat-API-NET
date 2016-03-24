@@ -14,25 +14,6 @@ namespace WhatsAppApi
     {
         protected bool m_usePoolMessages        = false;
 
-        public void Login3(byte[] nextChallenge = null)
-        {
-            this.reader.Key = null;
-            this.BinWriter.Key = null;
-            this._challengeBytes = null;
-
-            this._challengeBytes = System.IO.File.ReadAllBytes(string.Format(@"c:\temp\challenge-{0}.dat", this.phoneNumber));
-
-            ProtocolTreeNode authResp = this.createAuthResponseNode();
-        
-            this.reader.Key = this._inputKey;
-            this.BinWriter.Key = this._outputKey;
-
-
-            this.SendData(this.BinWriter.Write(authResp));
-
-
-        }
-
         public void Login(byte[] nextChallenge = null)
         {
             //reset stuff
@@ -242,9 +223,10 @@ namespace WhatsAppApi
 
         protected bool processInboundData(byte[] msgdata, bool autoReceipt = true)
         {
+            ProtocolTreeNode node = null;
             try
             {
-                ProtocolTreeNode node = this.reader.nextTree(msgdata);
+                node = this.reader.nextTree(msgdata);
 
                 if (node != null)
                 {
@@ -395,9 +377,11 @@ namespace WhatsAppApi
                     return true;
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                throw e;
+                //throw e;
+                fireOnProcessMessageException(ex, msgdata, node);
+
             }
             return false;
         }

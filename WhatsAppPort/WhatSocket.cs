@@ -27,6 +27,13 @@ namespace WhatsAppPort
         public static void Create(string username, string password, string nickname, bool debug = false)
         {
             _instance = new WhatsAppApi.WhatsApp(username, password, nickname, debug);
+            _instance.OnProcessMessageException += OnProcessMessageExceptionEvent;
+        }
+
+        private static void OnProcessMessageExceptionEvent(Exception ex, byte[] data, WhatsAppApi.Helper.ProtocolTreeNode node)
+        {
+            System.Windows.Forms.MessageBox.Show(ex.Message);
+
         }
     }
 }
