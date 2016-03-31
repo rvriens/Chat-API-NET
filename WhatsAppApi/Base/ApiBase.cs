@@ -184,12 +184,6 @@ namespace WhatsAppApi
             return UnixEpoch.AddSeconds(timestamp);
         }
 
-        protected static int GetTimestamp(DateTime datetime)
-        {
-            DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0);
-            return (int)Math.Floor((datetime - UnixEpoch).TotalSeconds);
-        }
-
         protected byte[] ProcessProfilePicture(byte[] bytes)
         {
             Bitmap image;

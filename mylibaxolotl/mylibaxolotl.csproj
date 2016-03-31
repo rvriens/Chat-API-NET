@@ -45,7 +45,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="mycurve25519">
-      <HintPath>..\Debug\mycurve25519.dll</HintPath>
+      <HintPath>..\mycurve25519.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

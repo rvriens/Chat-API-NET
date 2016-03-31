@@ -1,4 +1,4 @@
-﻿// http://www.darkfader.net/toolbox/convert/ test units
+// http://www.darkfader.net/toolbox/convert/ test units
 using libaxolotl;
 using libaxolotl.protocol;
 using libaxolotl.state;
@@ -104,28 +104,36 @@ namespace WhatsAppApi.Helper
                 }
                 else
                 {
+                    string id = node.GetAttribute("id");
                     //decrypt the message with the session
-                    if (node.GetChild("enc").GetAttribute("count") == "")
-                        setRetryCounter(node.GetAttribute("id"), 1);
+                    if (String.IsNullOrEmpty(node.GetChild("enc").GetAttribute("count")))
+                        setRetryCounter(id, 1);
                     if (version == "2"){
                         if (!v2Jids.Contains(author))
                             v2Jids.Add(author);
                     }
 
-                    object plaintext = decryptMessage(from, encMsg, encType, node.GetAttribute("id"), node.GetAttribute("t"));
+                    object plaintext = decryptMessage(from, encMsg, encType, id, node.GetAttribute("t"));
 
                     if (plaintext.GetType() == typeof(bool) && false == (bool)plaintext)
                     {
-                        sendRetry(node, from, node.GetAttribute("id"), node.GetAttribute("t"));
-                        Helper.DebugAdapter.Instance.fireOnPrintDebug("info : " + string.Format("Couldn't decrypt message id {0} from {1}. Retrying.", node.GetAttribute("id"), author));
+                        if (!retryCounters.ContainsKey(id) || retryCounters[id] <= 2)
+                        {
+                            sendRetry(node, from, id, node.GetAttribute("t"));
+                            Helper.DebugAdapter.Instance.fireOnPrintDebug("info : " + string.Format("Couldn't decrypt message id {0} from {1}. Retrying.", id, author));
+                        } else
+                        {
+                            Helper.DebugAdapter.Instance.fireOnPrintDebug("info : " + string.Format("Couldn't decrypt message id {0} from {1}. too many retries.", id, author));
+                        }
+
                         return node; // could not decrypt
                     }
 
                     // success now lets clear all setting and return node
-                    if (retryCounters.ContainsKey(node.GetAttribute("id")))
-                        retryCounters.Remove(node.GetAttribute("id"));
-                    if (retryNodes.ContainsKey(node.GetAttribute("id")))
-                        retryNodes.Remove(node.GetAttribute("id"));
+                    if (retryCounters.ContainsKey(id))
+                        retryCounters.Remove(id);
+                    if (retryNodes.ContainsKey(id))
+                        retryNodes.Remove(id);
 
                     switch (node.GetAttribute("type"))
                     {
@@ -256,7 +264,7 @@ namespace WhatsAppApi.Helper
         /// Generate the keysets for ourself
         /// </summary>
         /// <returns></returns>
-        public bool SendSetPreKeys(bool isnew = false)
+        public bool sendSetPreKeys(bool isnew = false)
         {
             uint registrationId             = 0;
             if (!isnew) registrationId      = (uint)this.GetLocalRegistrationId();
@@ -359,7 +367,13 @@ namespace WhatsAppApi.Helper
         /// <param name="counter"></param>
         public void setRetryCounter(string id, int counter)
         {
-            //   retryCounters[$id] = $counter;
+            if (retryCounters.ContainsKey(id))
+             {
+                retryCounters[id] = counter;
+            } else
+            {
+                retryCounters.Add(id, counter);
+            }
         }
 
         /// <summary>
@@ -686,7 +700,11 @@ namespace WhatsAppApi.Helper
         public SignedPreKeyRecord LoadSignedPreKey(UInt32 signedPreKeyId)
         {
             if (this.OnloadSignedPreKey != null){
-                return new SignedPreKeyRecord(this.OnloadSignedPreKey(signedPreKeyId));
+                byte[] bytes = this.OnloadSignedPreKey(signedPreKeyId);
+                if (bytes.Length > 0)
+                {
+                    return new SignedPreKeyRecord(bytes);
+                }
             }
             return null;
         }

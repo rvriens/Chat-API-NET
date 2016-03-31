@@ -514,6 +514,14 @@ namespace WhatsAppApi
             this.SendNode(node);
         }
 
+        public void SendGetClientConfig()
+        {
+            string id = TicketCounter.MakeId();
+            var child = new ProtocolTreeNode("config", new[] { new KeyValue("xmlns", "urn:xmpp:whatsapp:push") });
+            var node = new ProtocolTreeNode("iq", new[] { new KeyValue("id", id), new KeyValue("type", "get"), new KeyValue("to", WhatsConstants.WhatsAppRealm) }, new ProtocolTreeNode[] { child });
+            this.SendNode(node);
+        }
+
         public void SendGetDirty()
         {
             string id = TicketCounter.MakeId();

@@ -134,7 +134,16 @@ namespace libaxolotl
                 return May<uint>.NoValue;
             }
 
-            ECKeyPair ourSignedPreKey = signedPreKeyStore.LoadSignedPreKey(message.getSignedPreKeyId()).getKeyPair();
+            uint signedPreKeyId = message.getSignedPreKeyId();
+
+            SignedPreKeyRecord ourSignedPreKeyRecord = signedPreKeyStore.LoadSignedPreKey(signedPreKeyId);
+
+            if (ourSignedPreKeyRecord == null)
+            {
+                return May<uint>.NoValue;
+            }
+
+            ECKeyPair ourSignedPreKey = ourSignedPreKeyRecord.getKeyPair();
 
             BobAxolotlParameters.Builder parameters = BobAxolotlParameters.newBuilder();
 

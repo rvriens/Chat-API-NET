@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Xml.Serialization;
 using WhatsAppApi;
 using WhatsAppApi.Account;
 using WhatsAppApi.Helper;
@@ -20,23 +21,64 @@ namespace WhatsTest
     internal class Program
     {
         // DEMO STORE SHOULD BE DATABASE OR PERMANENT MEDIA IN REAL CASE
-        static IDictionary<string, axolotl_identities_object> axolotl_identities = new Dictionary<string, axolotl_identities_object>();
-        static IDictionary<uint, axolotl_prekeys_object> axolotl_prekeys = new Dictionary<uint, axolotl_prekeys_object>();
-        static IDictionary<uint, axolotl_sender_keys_object> axolotl_sender_keys = new Dictionary<uint, axolotl_sender_keys_object>();
-        static IDictionary<string, axolotl_sessions_object> axolotl_sessions = new Dictionary<string, axolotl_sessions_object>();
-        static IDictionary<uint, axolotl_signed_prekeys_object> axolotl_signed_prekeys = new Dictionary<uint, axolotl_signed_prekeys_object>();
+        static IDictionary<string, axolotl_identities_object> axolotl_identities        = new Dictionary<string, axolotl_identities_object>();
+        static IDictionary<uint, axolotl_prekeys_object> axolotl_prekeys                = new Dictionary<uint, axolotl_prekeys_object>();
+        static IDictionary<uint, axolotl_sender_keys_object> axolotl_sender_keys        = new Dictionary<uint, axolotl_sender_keys_object>();
+        static IDictionary<string, axolotl_sessions_object> axolotl_sessions            = new Dictionary<string, axolotl_sessions_object>();
+        static IDictionary<uint, axolotl_signed_prekeys_object> axolotl_signed_prekeys  = new Dictionary<uint, axolotl_signed_prekeys_object>();
 
         static WhatsApp wa = null;
+        static bool debug2file = true;
+        static string baseDirectory = null;
+        static string attachmentDirectory = null; 
+
         private static void Main(string[] args)
         {
             var tmpEncoding = Encoding.UTF8;
             System.Console.OutputEncoding = Encoding.Default;
             System.Console.InputEncoding = Encoding.Default;
-            string nickname = "WhatsApiNet";
 
-            string sender = "";
-            string password = "";
-            string target = "";
+
+            baseDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);
+            if (baseDirectory.StartsWith("file:\\"))
+            {
+                baseDirectory = baseDirectory.Substring(6);
+            }
+            attachmentDirectory = System.IO.Path.Combine(baseDirectory, "attachments");
+            if (!System.IO.Directory.Exists(attachmentDirectory))
+            {
+                System.IO.Directory.CreateDirectory(attachmentDirectory);
+            }
+
+            
+            string settingsFile = System.IO.Path.Combine(baseDirectory, "Settings.xml");
+            Settings settings = null;
+            XmlSerializer serializer = new XmlSerializer(typeof(Settings));
+            if (System.IO.File.Exists(settingsFile))
+            {
+                using (TextReader reader = new StreamReader(settingsFile)) 
+                {
+                    settings = (Settings)serializer.Deserialize(reader);
+                }
+            }
+            else 
+            {
+                settings = new Settings();
+                settings.Nickname = "WhatsApiNet";
+                settings.Sender = "123456789";
+                settings.Password = "changeme";
+                settings.Target = "123456789";
+
+                using (TextWriter writer = new StreamWriter(settingsFile))
+                {
+                    serializer.Serialize(writer, settings);
+                }
+                return;
+            }
+            string nickname = settings.Nickname ;
+            string sender = settings.Sender ; // Mobile number with country code (but without + or 00)
+            string password = settings.Password;//v2 password
+            string target = settings.Target;// Mobile number to send the message to
 
             wa = new WhatsApp(sender, password, nickname, true);
 
@@ -93,9 +135,6 @@ namespace WhatsTest
             // Error Notification ErrorAxolotl
             wa.OnErrorAxolotl += wa_OnErrorAxolotl;
 
-
-            wa.OnProcessMessageException += wa_On_ProcessMessageException;
-
             wa.Connect();
 
             string datFile = getDatFileName(sender);
@@ -113,28 +152,40 @@ namespace WhatsTest
             wa.Login(nextChallenge);
             wa.SendGetPrivacyList();
             wa.SendGetClientConfig();
-            //wa.SendSetPrivacySetting(ApiBase.VisibilityCategory.Status, ApiBase.VisibilitySetting.Everyone);
-            //wa.SendStatusUpdate("Hi"); // Hey there! I am using WhatsApp
 
             if (wa.LoadPreKeys() == null)
-                wa.SendSetPreKeys(true);
+                wa.sendSetPreKeys(true);
 
             ProcessChat(wa, target);
             Console.ReadKey();
         }
+
         static void wa_OnGetMessageReadedClient(string from, string id)
-            {
+        {
             Console.WriteLine("Message {0} to {1} read by client", id, from);
         }
 
         static void Instance_OnPrintDebug(object value)
         {
-            Console.WriteLine(value);
+            // 
+            if (debug2file)
+            {
+                var debugFile = System.IO.Path.Combine(baseDirectory, String.Format("debug-{0:yyyyMMdd}.log", DateTime.Now));
+                System.IO.File.AppendAllText(debugFile, String.Format("{0:hhmmss} - {1}\n", DateTime.Now, value));
+            } else
+            {
+                Console.WriteLine(value);
+            }
         }
 
         static void wa_OnGetPrivacySettings(Dictionary<ApiBase.VisibilityCategory, ApiBase.VisibilitySetting> settings)
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
+            foreach (var setting in settings)
+            {
+                Console.WriteLine(String.Format("Got sprivacy settings {0}: {1}", setting.Key , setting.Value));
+            }
+            
         }
 
         static void wa_OnGetStatus(string from, string type, string name, string status)
@@ -172,57 +223,73 @@ namespace WhatsTest
 
         static void wa_OnGetPhotoPreview(string from, string id, byte[] data)
         {
-            Console.WriteLine("Got preview photo for {0}", from);
-            File.WriteAllBytes(string.Format("preview_{0}.jpg", from), data);
+            Console.WriteLine("Got preview photo for {0} ({1})", from, id);
+            
+            //File.WriteAllBytes(string.Format("preview_{0}.jpg", from), data);
+
+            var file = System.IO.Path.Combine(attachmentDirectory, string.Format("preview_{0}.jpg", id));
+            File.WriteAllBytes(file, data);
         }
 
         static void wa_OnGetPhoto(string from, string id, byte[] data)
         {
-            Console.WriteLine("Got full photo for {0}", from);
-            File.WriteAllBytes(string.Format("{0}.jpg", from), data);
+            Console.WriteLine("Got full photo for {0} ({1})", from, id);
+            // File.WriteAllBytes(string.Format("{0}.jpg", from), data);
+
+            var file = System.IO.Path.Combine(attachmentDirectory, string.Format("{0}.jpg", id));
         }
 
         static void wa_OnGetMessageVcard(ProtocolTreeNode vcardNode, string from, string id, string name, byte[] data)
         {
-            Console.WriteLine("Got vcard \"{0}\" from {1}", name, from);
-            File.WriteAllBytes(string.Format("{0}.vcf", name), data);
+            Console.WriteLine("Got vcard \"{0}\" from {1} ({2})", name, from, id);
+            //File.WriteAllBytes(string.Format("{0}.vcf", name), data);
+
+            var file = System.IO.Path.Combine(attachmentDirectory, string.Format("preview_{0}.vcf", id));
+            File.WriteAllBytes(file, data);
         }
 
         // string User new
         static void wa_OnGetMessageLocation(ProtocolTreeNode locationNode, string from, string id, double lon, double lat, string url, string name, byte[] preview, string User)
         {
-            Console.WriteLine("Got location from {0} ({1}, {2})", from, lat, lon);
+            Console.WriteLine("Got location from {0} ({1}, {2}) ({3})", from, lat, lon, id);
             if(!string.IsNullOrEmpty(name))
             {
                 Console.WriteLine("\t{0}", name);
             }
-            File.WriteAllBytes(string.Format("{0}{1}.jpg", lat, lon), preview);
+            //File.WriteAllBytes(string.Format("{0}{1}.jpg", lat, lon), preview);
+
+            var file = System.IO.Path.Combine(attachmentDirectory, string.Format("preview_{0}.vcf", id));
+            File.WriteAllBytes(file, preview);
         }
 
         static void wa_OnGetMessageVideo(ProtocolTreeNode mediaNode, string from, string id, string fileName, int fileSize, string url, byte[] preview, string name)
         {
             Console.WriteLine("Got video from {0}", from, fileName);
-            OnGetMedia(fileName, url, preview);
+            OnGetMedia(fileName, url, preview, id);
         }
 
         // string name new
         static void wa_OnGetMessageAudio(ProtocolTreeNode mediaNode, string from, string id, string fileName, int fileSize, string url, byte[] preview, string name)
         {
             Console.WriteLine("Got audio from {0}", from, fileName);
-            OnGetMedia(fileName, url, preview);
+            OnGetMedia(fileName, url, preview, id);
         }
 
         // string name new
         static void wa_OnGetMessageImage(ProtocolTreeNode mediaNode, string from, string id, string fileName, int size, string url, byte[] preview, string name)
         {
             Console.WriteLine("Got image from {0}", from, fileName);
-            OnGetMedia(fileName, url, preview);
+            OnGetMedia(fileName, url, preview, id);
         }
 
-        static void OnGetMedia(string file, string url, byte[] data)
+        static void OnGetMedia(string file, string url, byte[] data, string id)
         {
+
+            var fileName = System.IO.Path.Combine(attachmentDirectory, string.Format("preview_{0}.jpg", id));
+            File.WriteAllBytes(file, data);
+
             //save preview
-            File.WriteAllBytes(string.Format("preview_{0}.jpg", file), data);
+            //File.WriteAllBytes(string.Format("preview_{0}.jpg", file), data);
             //download
             using (WebClient wc = new WebClient())
             {
@@ -273,16 +340,13 @@ namespace WhatsTest
         {
             //TODO
             //throw new NotImplementedException();
+            
+
         }
 
         static void wa_OnGetMessage(ProtocolTreeNode node, string from, string id, string name, string message, bool receipt_sent)
         {
             Console.WriteLine("Message from {0} {1}: {2}", name, from, message);
-
-            if (message.StartsWith("echo "))
-            {
-                wa.SendMessage(from, message.Substring(5));
-            }
         }
 
         private static void wa_OnLoginFailed(string data)
@@ -302,11 +366,6 @@ namespace WhatsTest
             catch (Exception) { }
         }
 
-        private static void wa_On_ProcessMessageException(Exception ex, byte[] data, ProtocolTreeNode node)
-        {
-            Console.WriteLine(String.Format("Exception: {0}, {1}", ex.Message, (node != null ? node.ToString() : "")));
-        }
-
         private static void ProcessChat(WhatsApp wa, string dst)
         {
             var thRecv = new Thread(t =>
@@ -319,7 +378,7 @@ namespace WhatsTest
                                                     Thread.Sleep(100);
                                                     continue;
                                                 }
-
+                                                    
                                             }
                                             catch (ThreadAbortException)
                                             {
@@ -365,7 +424,7 @@ namespace WhatsTest
                         wa.SendMessage(tmpUser.GetFullJid(), line);
                         break;
                 }
-           }
+           } 
         }
 
         // ALL NE REQUIRED INTERFACES FOR AXOLOTL ARE BELOW
@@ -375,6 +434,16 @@ namespace WhatsTest
         /// <param name="ErrorMessage"></param>
         static void wa_OnErrorAxolotl(string ErrorMessage)
         {
+            // 
+            if (debug2file)
+            {
+                var debugFile = System.IO.Path.Combine(baseDirectory, String.Format("debug-{0:yyyyMMdd}.log", DateTime.Now));
+                System.IO.File.AppendAllText(debugFile, String.Format("{0:hhmmss} - {1}\n", DateTime.Now, ErrorMessage));
+            }
+            else
+            {
+                Console.WriteLine(ErrorMessage);
+            }
         }
 
         #region DATABASE BINDING FOR IIdentityKeyStore

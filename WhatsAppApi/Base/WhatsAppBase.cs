@@ -36,9 +36,7 @@ namespace WhatsAppApi
             }
         }
 
-        protected KeyStream _outputKey;
-
-        protected KeyStream _inputKey;
+        protected KeyStream outputKey;
 
         protected object messageLock = new object();
 
@@ -142,11 +140,6 @@ namespace WhatsAppApi
             {
                 this.Disconnect();
             }
-        }
-
-        protected string getChallengeFile()
-        {
-            return string.Format(@"c:\temp\challenge-{0}.dat", this.phoneNumber);
         }
 
         //BRIAN MODIFIED FIXME: SHOULD NOT BE OPENED LIKE THIS INLINE THE Axolotl CLASS INSTEAD

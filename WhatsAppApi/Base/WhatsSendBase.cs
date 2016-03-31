@@ -21,20 +21,15 @@ namespace WhatsAppApi
             this.BinWriter.Key = null;
             this._challengeBytes = null;
 
-            string challengeFile = this.getChallengeFile();
-
-            if (System.IO.File.Exists(challengeFile))
-            {
-                this._challengeBytes = System.IO.File.ReadAllBytes(challengeFile);
-            }
-
             if (nextChallenge != null)
             {
                 this._challengeBytes = nextChallenge;
             }
 
-            string resource = string.Format(@"{0}-{1}", WhatsConstants.Platform, WhatsConstants.WhatsAppVer);
-
+            string resource = string.Format(@"{0}-{1}-{2}",
+                WhatsConstants.Device,
+                WhatsConstants.WhatsAppVer,
+                WhatsConstants.WhatsPort);
             var data = this.BinWriter.StartStream(WhatsConstants.WhatsAppServer, resource);
             var feat = this.addFeatures();
             var auth = this.addAuth();
@@ -46,46 +41,17 @@ namespace WhatsAppApi
             this.pollMessage();//features
             this.pollMessage();//challenge or success
 
-
             if (this.loginStatus != CONNECTION_STATUS.LOGGEDIN)
             {
                 //oneshot failed
-                ProtocolTreeNode authResp = this.createAuthResponseNode();
-                this.SendData(this.BinWriter.Write(authResp));
-
-                this.reader.Key = this._inputKey;
-                this.BinWriter.Key = this._outputKey;
-
-                // this.pollMessage();
+                ProtocolTreeNode authResp = this.addAuthResponse();
+                this.SendData(this.BinWriter.Write(authResp, false));
+                this.pollMessage();
             }
 
             Int32 unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
             TicketCounter.setLoginTime(unixTimestamp.ToString());
             this.SendAvailableForChat(this.name, this.hidden);
-            this.SendGetPrivacyBlockedList();
-            this.SendGetClientConfig();
-
-            this.SendSetPreKeys();
-
-
-            this.pollMessage();
-
-            //this.SetMessageId(substr(bin2hex(mcrypt_create_iv(64, MCRYPT_DEV_URANDOM)), 0, 22)); // 11 char hex
-
-
-
-            //if (extension_loaded('curve25519') || extension_loaded('protobuf'))
-            //{
-            //    if (file_exists($this->parent->dataFolder.'axolotl-'.$this->phoneNumber.'.db'))
-            //    {
-            //  $pre_keys = $this->parent->getAxolotlStore()->loadPreKeys();
-            //        if (empty($pre_keys))
-            //        {
-            //      $this->parent->sendSetPreKeys();
-            //      $this->parent->logFile('info', 'Sending prekeys to WA server');
-            //        }
-            //    }
-            //}
         }
 
         public void PollMessages(bool autoReceipt = true)
@@ -118,18 +84,18 @@ namespace WhatsAppApi
 
         protected ProtocolTreeNode addFeatures()
         {
-            /*ProtocolTreeNode readReceipts = new ProtocolTreeNode("readreceipts", null, null, null);
+            ProtocolTreeNode readReceipts = new ProtocolTreeNode("readreceipts", null, null, null);
             ProtocolTreeNode groups_v2 = new ProtocolTreeNode("groups_v2", null, null, null);
             ProtocolTreeNode privacy = new ProtocolTreeNode("privacy", null, null, null);
-            ProtocolTreeNode presencev2 = new ProtocolTreeNode("presence", null, null, null);*/
-            return new ProtocolTreeNode("stream:features", null, null, null);
+            ProtocolTreeNode presencev2 = new ProtocolTreeNode("presence", null, null, null);
+            return new ProtocolTreeNode("stream:features", null, new ProtocolTreeNode[] { readReceipts, groups_v2, privacy, presencev2 }, null);
         }
 
         protected ProtocolTreeNode addAuth()
         {
             List<KeyValue> attr = new List<KeyValue>(new KeyValue[] {
-                new KeyValue("user", this.phoneNumber),
-                new KeyValue("mechanism", Helper.KeyStream.AuthMethod)});
+                new KeyValue("mechanism", Helper.KeyStream.AuthMethod),
+                new KeyValue("user", this.phoneNumber)});
             if (this.hidden)
             {
                 attr.Add(new KeyValue("passive", "true"));
@@ -145,11 +111,9 @@ namespace WhatsAppApi
             {
                 byte[][] keys = KeyStream.GenerateKeys(this.encryptPassword(), this._challengeBytes);
 
-                this._inputKey = new KeyStream(keys[2], keys[3]);
+                this.reader.Key = new KeyStream(keys[2], keys[3]);
 
-                this._outputKey = new KeyStream(keys[0], keys[1]);
-
-                this.reader.Key = this._inputKey;
+                this.outputKey = new KeyStream(keys[0], keys[1]);
 
                 PhoneNumber pn = new PhoneNumber(this.phoneNumber);
 
@@ -162,63 +126,41 @@ namespace WhatsAppApi
 
                 this._challengeBytes = null;
 
-                this._outputKey.EncodeMessage(data, 0, 4, data.Length - 4);
+                this.outputKey.EncodeMessage(data, 0, 4, data.Length - 4);
 
-                // this.BinWriter.Key = this._outputKey;
+                this.BinWriter.Key = this.outputKey;
             }
 
             return data;
         }
 
-        protected ProtocolTreeNode createAuthResponseNode()
-        {
-            var node = new ProtocolTreeNode("response", null, null, this.authenticate());
-            return node;
-        }
-
-        protected byte[] authenticate()
+        protected ProtocolTreeNode addAuthResponse()
         {
             if (this._challengeBytes != null)
             {
                 byte[][] keys = KeyStream.GenerateKeys(this.encryptPassword(), this._challengeBytes);
 
-                this._inputKey = new KeyStream(keys[2], keys[3]);
-                this._outputKey = new KeyStream(keys[0], keys[1]);
+                this.reader.Key = new KeyStream(keys[2], keys[3]);
+                this.BinWriter.Key = new KeyStream(keys[0], keys[1]);
 
                 List<byte> b = new List<byte>();
                 b.AddRange(new byte[] { 0, 0, 0, 0 });
                 b.AddRange(WhatsApp.SYSEncoding.GetBytes(this.phoneNumber));
                 b.AddRange(this._challengeBytes);
-                b.AddRange(WhatsApp.SYSEncoding.GetBytes(Helper.Func.GetNowUnixTimestamp().ToString()));
-                b.AddRange(WhatsApp.SYSEncoding.GetBytes("000"));
-                b.AddRange(new byte[] { 0 });
-                b.AddRange(WhatsApp.SYSEncoding.GetBytes("000"));
-                b.AddRange(new byte[] { 0 });
-                b.AddRange(WhatsApp.SYSEncoding.GetBytes(WhatsConstants.OsVersion));
-                b.AddRange(new byte[] { 0 });
-                b.AddRange(WhatsApp.SYSEncoding.GetBytes(WhatsConstants.Manufacturer));
-                b.AddRange(new byte[] { 0 });
-                b.AddRange(WhatsApp.SYSEncoding.GetBytes(WhatsConstants.Device));
-                b.AddRange(new byte[] { 0 });
-                b.AddRange(WhatsApp.SYSEncoding.GetBytes(WhatsConstants.BuildVersion));
+
+
                 byte[] data = b.ToArray();
+                this.BinWriter.Key.EncodeMessage(data, 0, 4, data.Length - 4);
+                var node = new ProtocolTreeNode("response", null, null, data);
 
-                string data2 = Func._toHex(data);
-
-                return this._outputKey.EncodeMessage(data, 0, 4, data.Length - 4);
+                return node;
             }
             throw new Exception("Auth response error");
         }
 
         protected void processChallenge(ProtocolTreeNode node)
         {
-            this.setChallengeBytes(node.data);
-        }
-
-        protected void setChallengeBytes(byte[] challengeBytes)
-        {
-            this._challengeBytes = challengeBytes;
-            System.IO.File.WriteAllBytes(this.getChallengeFile(), challengeBytes);
+            _challengeBytes = node.data;
         }
 
         protected bool processInboundData(byte[] msgdata, bool autoReceipt = true)
@@ -406,6 +348,20 @@ namespace WhatsAppApi
                 // encrypted messages have no body node. Instead, the encrypted cipher text is provided within the enc node
                 if (node.GetChild("enc") != null){
                     node = processEncryptedNode(node);
+                }
+
+                if (node.GetChild("enc") != null)
+                {
+                    this.fireOnGetMessage(node, node.GetAttribute("from"), node.GetAttribute("id"),
+                                        node.GetAttribute("notify"), "<encrypted: need-key-request>",
+                                        autoReceipt);
+                   
+                    // Stop trying
+                    if (autoReceipt && string.IsNullOrEmpty(node.GetChild("enc").GetAttribute("count")) && int.Parse(node.GetChild("enc").GetAttribute("count")) >= 2 )
+                    {
+                         this.sendMessageReceived(node);
+                    }
+                    return;
                 }
 
                 var contentNode = node.GetChild("body") ?? node.GetChild("enc");
@@ -647,16 +603,13 @@ namespace WhatsAppApi
             {
                 case "encrypt":
                     string encrytrid = node.GetAttribute("value");
+                    if (encrytrid == null && node.GetAllChildren().Any())
+                    {
+                        encrytrid = node.GetAllChildren().First().GetAttribute("value");
+                    }
                     if (encrytrid != null && encrytrid.All(char.IsDigit) && encrytrid.Length > 0) {
                         RemoveAllPreKeys();
-                        SendSetPreKeys(true);
-                    }
-                    string action = node.GetAttribute("action");
-
-                    if (action == "creation")
-                    {
-                        RemoveAllPreKeys();
-                        SendSetPreKeys(true);
+                        sendSetPreKeys(true);
                     }
 
                     break;
@@ -758,27 +711,6 @@ namespace WhatsAppApi
         public void SendAvailableForChat(string nickName = null, bool isHidden = false)
         {
             var node = new ProtocolTreeNode("presence", new[] { new KeyValue("name", (!String.IsNullOrEmpty(nickName) ? nickName : this.name)) });
-            this.SendNode(node);
-        }
-
-        public void SendGetPrivacyBlockedList()
-        {
-            ProtocolTreeNode child = new ProtocolTreeNode("list", new KeyValue[] { new KeyValue("name", "default") }, new ProtocolTreeNode[] { });
-            ProtocolTreeNode node = new ProtocolTreeNode("iq", new KeyValue[] {
-                new KeyValue("id", TicketCounter.MakeId()),
-                new KeyValue("xmlns", "jabber:iq:privacy"),
-                new KeyValue("type", "get")
-            }, new ProtocolTreeNode[] {
-                new ProtocolTreeNode("query", new KeyValue[] { }, new ProtocolTreeNode[] {  child })
-            });
-            this.SendNode(node);
-        }
-
-        public void SendGetClientConfig()
-        {
-            string id = TicketCounter.MakeId();
-            var child = new ProtocolTreeNode("config", new[] { new KeyValue("xmlns", "urn:xmpp:whatsapp:push") });
-            var node = new ProtocolTreeNode("iq", new[] { new KeyValue("id", id), new KeyValue("type", "get"), new KeyValue("to", WhatsConstants.WhatsAppRealm) }, new ProtocolTreeNode[] { child });
             this.SendNode(node);
         }
 

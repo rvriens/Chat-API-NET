@@ -37,9 +37,6 @@ namespace WhatsAppApi
         /// </summary>
         private Socket socket;
 
-
-        private Boolean debug;
-
         /// <summary>
         /// Default class constructor
         /// </summary>
@@ -51,11 +48,6 @@ namespace WhatsAppApi
             this.recvTimeout = timeout;
             this.whatsPort = port;
             this.incomplete_message = new List<byte>();
-#if DEBUG
-
-            this.debug = true;
-#endif
-
         }
 
         /// <summary>
@@ -69,28 +61,20 @@ namespace WhatsAppApi
             this.incomplete_message = new List<byte>();
         }
 
-        public void writeDebug(bool send, byte[] data)
-        {
-            if (!this.debug) return;
-            string log = string.Format("{0} {1}\n", send ? ">" : "<", Func._toHex(data));
-            System.IO.File.AppendAllText(@"c:\temp\Whattsapi.log", log);
-        }
-
         /// <summary>
         /// Connect to the whatsapp server
         /// </summary>
         public void Connect()
         {
-            try
+            try { 
+            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+			Random random = new Random();
+			this.socket.Connect("e" + random.Next(1, 17) + ".whatsapp.net", this.whatsPort);
+            this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, this.recvTimeout);
+                }
+            catch(Exception ex)
             {
-                this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                Random random = new Random();
-                this.socket.Connect("e" + random.Next(1, 16) + ".whatsapp.net", this.whatsPort);
-                this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, this.recvTimeout);
-            }
-            catch (Exception ex)
-            {
-                throw new ConnectionException("Cannot connect " + ex.ToString());
+                throw new ConnectionException("Cannot connect " + ex.ToString() );
             }
             if (!this.socket.Connected)
                 throw new ConnectionException("Cannot connect");
@@ -131,7 +115,6 @@ namespace WhatsAppApi
         /// <param name="data">Data to be send as a byte array</param>
         public void SendData(byte[] data)
         {
-            string data2 = Func._toHex(data);
             Socket_send(data);
         }
 
@@ -211,8 +194,6 @@ namespace WhatsAppApi
             byte[] tmpRet = new byte[receiveLength];
             if (receiveLength > 0)
                 Buffer.BlockCopy(buff, 0, tmpRet, 0, receiveLength);
-
-            this.writeDebug(false, tmpRet);
             return tmpRet;
         }
 
@@ -225,7 +206,7 @@ namespace WhatsAppApi
         private void Socket_send(string data, int length, int flags)
         {
             var tmpBytes = WhatsApp.SYSEncoding.GetBytes(data);
-            Socket_send(tmpBytes);
+            this.socket.Send(tmpBytes);
         }
 
         /// <summary>
@@ -236,7 +217,6 @@ namespace WhatsAppApi
         {
             if (this.socket != null && this.socket.Connected)
             {
-                this.writeDebug(true, data);
                 this.socket.Send(data);
             }
             else
