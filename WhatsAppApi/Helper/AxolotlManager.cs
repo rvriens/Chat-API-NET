@@ -138,14 +138,49 @@ namespace WhatsAppApi.Helper
                     switch (node.GetAttribute("type"))
                     {
                         case "text":
-                            //Convert to list.
-                            List<ProtocolTreeNode> children = node.children.ToList();
-                            List<KeyValue> attributeHash = node.attributeHash.ToList();
-                            children.Add(new ProtocolTreeNode("body", null, null, (byte[])plaintext));
-                            rtnNode = new ProtocolTreeNode(node.tag, attributeHash.ToArray(), children.ToArray(), node.data);
+                            {
+                                //Convert to list.
+                                List<ProtocolTreeNode> children = (from q in node.children where !string.Equals(q.tag, "enc") select q).ToList();
+
+                                List<KeyValue> attributeHash = node.attributeHash.ToList();
+                                byte[] data = null;
+
+                                if (plaintext.GetType() == typeof(string))
+                                {
+                                    data = System.Text.Encoding.UTF8.GetBytes((string)plaintext);
+                                }
+
+                                children.Add(new ProtocolTreeNode("body", null, null, data));
+                                rtnNode = new ProtocolTreeNode(node.tag, attributeHash.ToArray(), children.ToArray(), node.data);
+                            }
                             break;
                         case "media":
-                            // NOT IMPLEMENTED YET
+                            {
+                                /*
+                                                id = node.GetAttribute("id");
+                                    from = node.GetAttribute("from");
+                                    UserName = node.GetAttribute("notify");
+                                    switch (media.GetAttribute("type"))
+                                    {
+                                        case "image":
+                                    url = media.GetAttribute("url");
+                                    file = media.GetAttribute("file");
+                                    size = Int32.Parse(media.GetAttribute("size"));
+                                */
+
+                                //Convert to list.
+                                List<ProtocolTreeNode> children = (from q in node.children where !string.Equals(q.tag, "enc") select q).ToList();
+                                List<KeyValue> attributeHash = node.attributeHash.ToList();
+                                byte[] data = null;
+
+                                if (plaintext.GetType() == typeof(string))
+                                {
+                                    data = System.Text.Encoding.UTF8.GetBytes((string)plaintext);
+                                }
+
+                                children.Add(new ProtocolTreeNode("media", null, null, data));
+                                rtnNode = new ProtocolTreeNode(node.tag, attributeHash.ToArray(), children.ToArray(), node.data);
+                            }
                             break;
                     }
 

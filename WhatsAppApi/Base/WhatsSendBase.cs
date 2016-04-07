@@ -341,30 +341,32 @@ namespace WhatsAppApi
                 throw new NotImplementedException(node.NodeString());
             }
 
-
-            if (node.GetChild("body") != null || node.GetChild("enc") != null)
+            // text message
+            // encrypted messages have no body node. Instead, the encrypted cipher text is provided within the enc node
+            if (node.GetChild("enc") != null)
             {
-                // text message
-                // encrypted messages have no body node. Instead, the encrypted cipher text is provided within the enc node
-                if (node.GetChild("enc") != null){
-                    node = processEncryptedNode(node);
-                }
+                node = processEncryptedNode(node);
+            }
 
-                if (node.GetChild("enc") != null)
+            // decrypt failed
+            if (node.GetChild("enc") != null)
+            {
+                this.fireOnGetMessage(node, node.GetAttribute("from"), node.GetAttribute("id"),
+                                    node.GetAttribute("notify"), "<encrypted: need-key-request>",
+                                    autoReceipt);
+
+                // Stop trying
+                if (autoReceipt && string.IsNullOrEmpty(node.GetChild("enc").GetAttribute("count")) && int.Parse(node.GetChild("enc").GetAttribute("count")) >= 2)
                 {
-                    this.fireOnGetMessage(node, node.GetAttribute("from"), node.GetAttribute("id"),
-                                        node.GetAttribute("notify"), "<encrypted: need-key-request>",
-                                        autoReceipt);
-                   
-                    // Stop trying
-                    if (autoReceipt && string.IsNullOrEmpty(node.GetChild("enc").GetAttribute("count")) && int.Parse(node.GetChild("enc").GetAttribute("count")) >= 2 )
-                    {
-                         this.sendMessageReceived(node);
-                    }
-                    return;
+                    this.sendMessageReceived(node);
                 }
+                return;
+            }
 
-                var contentNode = node.GetChild("body") ?? node.GetChild("enc");
+
+            if (node.GetChild("body") != null )
+            {
+                var contentNode = node.GetChild("body");
                 if (contentNode != null)
                 {
                     this.fireOnGetMessage(node, node.GetAttribute("from"), node.GetAttribute("id"),
