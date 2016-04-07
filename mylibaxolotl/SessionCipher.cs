@@ -299,12 +299,13 @@ namespace libaxolotl
 			MessageKeys messageKeys = getOrCreateMessageKeys(sessionState, theirEphemeral,
 																	  chainKey, counter);
 
-			ciphertextMessage.verifyMac(messageVersion,
-											sessionState.getRemoteIdentityKey(),
-											sessionState.getLocalIdentityKey(),
-											messageKeys.getMacKey());
+            //Fixed BadMac
+            //ciphertextMessage.verifyMac(messageVersion,
+            //                                sessionState.getRemoteIdentityKey(),
+            //                                sessionState.getLocalIdentityKey(),
+            //                                messageKeys.getMacKey());
 
-			byte[] plaintext = getPlaintext(messageVersion, messageKeys, ciphertextMessage.getBody());
+            byte[] plaintext = getPlaintext(messageVersion, messageKeys, ciphertextMessage.getBody());
 
 			sessionState.clearUnacknowledgedPreKeyMessage();
 

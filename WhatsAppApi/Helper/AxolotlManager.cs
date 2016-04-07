@@ -91,7 +91,7 @@ namespace WhatsAppApi.Helper
             if (from.IndexOf("s.whatsapp.net", 0) > -1)
             {
                 author = ExtractNumber(node.GetAttribute("from"));
-                version = node.GetAttribute("v");
+                version = node.GetChild("enc").GetAttribute("v");
                 encType = node.GetChild("enc").GetAttribute("type");
                 encMsg = node.GetChild("enc").GetData();
 
@@ -179,9 +179,10 @@ namespace WhatsAppApi.Helper
                 {
                     PreKeyWhisperMessage preKeyWhisperMessage = new PreKeyWhisperMessage(ciphertext);
                     SessionCipher sessionCipher = getSessionCipher(ExtractNumber(from));
-                    return sessionCipher.decrypt(preKeyWhisperMessage);
-                   // if (version == "2" && !skip_unpad)
-                   //  return unpadV2Plaintext(plaintext.ToString());
+                    byte[] plaintext = sessionCipher.decrypt(preKeyWhisperMessage);
+                    String text = WhatsApp.SYSEncoding.GetString(plaintext);
+                    if (version == "2" && !skip_unpad)
+                        return unpadV2Plaintext(text);
                 }
                 catch (Exception e){
                   //  ErrorAxolotl(e.Message);
@@ -199,9 +200,10 @@ namespace WhatsAppApi.Helper
                 {
                     PreKeyWhisperMessage preKeyWhisperMessage = new PreKeyWhisperMessage(ciphertext);
                     SessionCipher sessionCipher = getSessionCipher(ExtractNumber(from));
-                    return sessionCipher.decrypt(preKeyWhisperMessage);
-                    // if (version == "2" && !skip_unpad)
-                    //     return unpadV2Plaintext(plaintext.ToString());
+                    byte[] plaintext = sessionCipher.decrypt(preKeyWhisperMessage);
+                    String text = WhatsApp.SYSEncoding.GetString(plaintext);
+                    if (version == "2" && !skip_unpad)
+                        return unpadV2Plaintext(text);
                 }
                 catch (Exception e)
                 {
@@ -521,14 +523,38 @@ namespace WhatsAppApi.Helper
         /// <returns></returns>
         public string unpadV2Plaintext(string v2plaintext)
         {
-          if(v2plaintext.Length < 128)
-            return v2plaintext.Substring(2,-1);
-          else
-            return v2plaintext.Substring(3,-1);
+            //if(v2plaintext.Length < 128)
+            //  return v2plaintext.Substring(2,-1);
+            //else
+            //  return v2plaintext.Substring(3,-1);
+            String ret = SubStr(v2plaintext, 2, -1);
+            return FixPadding(ret);
         }
 
-        #region raise a delegates error event to the main aplication
-        public event OnErrorAxolotlDelegate OnErrorAxolotl;
+        public static String FixPadding(String result)
+        {
+            /* From Chat-API Php Code */
+            Char lastChar = result[result.Length - 1];
+            String unpadded = result.TrimEnd(lastChar);
+            /* From Chat-API Php Code */
+
+            return unpadded;
+        }
+
+        //Php SubStr
+        public static string SubStr(String value, int startIndex, int length = 0)
+        {
+            if (length == 0)
+                return value.Substring(startIndex);
+
+            if (length< 0)
+                length = value.Length - 1 + length;
+
+            return value.Substring(startIndex, length);
+        }
+
+    #region raise a delegates error event to the main aplication
+    public event OnErrorAxolotlDelegate OnErrorAxolotl;
         public void ErrorAxolotl(String ErrorMessage)
         {
             if (this.OnErrorAxolotl != null)
