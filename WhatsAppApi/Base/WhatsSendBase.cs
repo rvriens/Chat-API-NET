@@ -341,6 +341,12 @@ namespace WhatsAppApi
                 throw new NotImplementedException(node.NodeString());
             }
 
+            ProtocolTreeNode org_node = node;
+
+
+            string from = node.GetAttribute("from");
+            string id = node.GetAttribute("id");
+
             // text message
             // encrypted messages have no body node. Instead, the encrypted cipher text is provided within the enc node
             if (node.GetChild("enc") != null)
@@ -355,8 +361,14 @@ namespace WhatsAppApi
                                     node.GetAttribute("notify"), "<encrypted: need-key-request>",
                                     autoReceipt);
 
+                int count = 0;
+                if (node.GetChild("enc").GetAttribute("count") != null)
+                {
+                    int.TryParse(node.GetChild("enc").GetAttribute("count"), out count);
+                }
+
                 // Stop trying
-                if (autoReceipt && string.IsNullOrEmpty(node.GetChild("enc").GetAttribute("count")) && int.Parse(node.GetChild("enc").GetAttribute("count")) >= 2)
+                if (autoReceipt && count >= 2)
                 {
                     this.sendMessageReceived(node);
                 }
@@ -374,22 +386,28 @@ namespace WhatsAppApi
                                         autoReceipt);
                     if (autoReceipt)
                     {
-                        this.sendMessageReceived(node);
+                        this.sendMessageReceived(org_node);
                     }
                 }
             }
             if (node.GetChild("media") != null)
             {
+                // 
+                if (org_node.GetChild("enc") != null && autoReceipt)
+                {
+                    this.sendMessageReceived(org_node);
+                }
+
                 ProtocolTreeNode media = node.GetChild("media");
                 //media message
 
                 //define variables in switch
                 string UserName;
-                string file, url, from, id;
+                string file, url;
                 int size;
                 byte[] preview, dat;
-                id = node.GetAttribute("id");
-                from = node.GetAttribute("from");
+                //id = node.GetAttribute("id");
+                //from = node.GetAttribute("from");
                 UserName = node.GetAttribute("notify");
                 switch (media.GetAttribute("type"))
                 {
@@ -707,6 +725,12 @@ namespace WhatsAppApi
         protected void sendMessageReceived(ProtocolTreeNode msg, string type = "read")
         {
             FMessage tmpMessage = new FMessage(new FMessage.FMessageIdentifierKey(msg.GetAttribute("from"), true, msg.GetAttribute("id")));
+            this.SendMessageReceived(tmpMessage, type);
+        }
+
+        protected void sendMessageReceived(string from, string id, string type = "read")
+        {
+            FMessage tmpMessage = new FMessage(new FMessage.FMessageIdentifierKey(from, true, id));
             this.SendMessageReceived(tmpMessage, type);
         }
 
